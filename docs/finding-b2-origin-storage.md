@@ -79,6 +79,7 @@ come back to.
 | `SeriesInputs.retainedFields` | `src/lib/normalise.ts` |
 | `declarations.retained` | `src/lib/serialise.ts` |
 | `.retained-marker` and `.retention-note` | `src/styles.css` |
+| The second C4-NF-03 figure in the constants register, measured against a restored document at 208px, withdrawn rather than left standing for a state the page cannot reach | `src/lib/flags.ts` |
 | `src/lib/retention.test.ts`, 10 tests, all of them about a feature that no longer exists | deleted |
 
 `src/lib/retention.ts` became `src/lib/suggestions.ts`. What was left in it
