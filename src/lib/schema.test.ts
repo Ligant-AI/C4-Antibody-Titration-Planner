@@ -194,15 +194,14 @@ describe('C4-OUT-01 and C4-OUT-02, what the object has to carry', () => {
     ).toBe('default')
   })
 
-  it('records which declarations, if any, were retained from a previous session', () => {
-    // C4-ST-03 and C4-NF-07, Nadira's review, item 2: a series read under a
-    // retained declaration must say so in the structured object too, not
-    // only on screen, and empty is the honest default for a fresh session.
-    expect(toStructuredResult(run(BASE)).declarations.retained).toEqual([])
-    const withRetained = toStructuredResult(
-      run({ ...BASE, retainedFields: ['stainingVolume', 'pipettingMinimum'] }),
-    )
-    expect(withRetained.declarations.retained).toEqual(['stainingVolume', 'pipettingMinimum'])
+  it('carries no retained-declaration key, because nothing can be retained', () => {
+    // FINDING B2. `declarations.retained` existed to say that a series had
+    // been read under a value carried over from a previous visit. Nothing is
+    // carried over any more, so the key is gone rather than pinned at `[]`:
+    // an object asserting a distinction the tool cannot make is worse than
+    // one that does not raise the question. SCHEMA_VERSION went to 2.0.0 for
+    // exactly this removal.
+    expect('retained' in toStructuredResult(run(BASE)).declarations).toBe(false)
   })
 
   it('records the cell density, with no threshold attached to it', () => {

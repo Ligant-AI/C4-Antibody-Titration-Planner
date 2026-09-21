@@ -1175,20 +1175,22 @@ table caption {
   font-weight: 600;
 }
 
-/* A value carried across a reload, and the pre-filled suggestions.
+/* The pre-filled suggestions.
  *
  * QUIETER THAN THEY WERE, deliberately. These used to be filled amber chips
- * in uppercase, and a reader meeting eleven of them on a restored form read
- * them as eleven alerts, could not find out what any of them meant, and had
- * no way to clear one. They are annotations on a label, not status: muted
- * text, an amber dot to carry the association with a decision still to be
- * made, no fill and no uppercase. What makes them legible is not weight but
- * that each is now explained (its own `FieldHelp`) and clearable (the panel's
- * "Confirm these values"). Amber stays the colour of a reader's decision; a
- * carried-over value is a decision not yet made, so the dot is amber and the
- * text is not.
+ * in uppercase, and a reader meeting a row of them read them as alerts, could
+ * not find out what any of them meant, and had no way to clear one. They are
+ * annotations on a label, not status: muted text, an amber dot to carry the
+ * association with a decision still to be made, no fill and no uppercase.
+ * What makes them legible is not weight but that each is explained (its own
+ * `FieldHelp`) and clearable (the panel's "Confirm the suggested values").
+ * Amber stays the colour of a reader's decision; a value the tool chose is a
+ * decision not yet made, so the dot is amber and the text is not.
+ *
+ * The `.retained-marker` that shared every rule here went with the origin
+ * storage that produced it, finding B2.
  */
-.retained-marker, .suggestion-marker {
+.suggestion-marker {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1201,7 +1203,7 @@ table caption {
   text-transform: none;
   white-space: nowrap;
 }
-.retained-marker::before, .suggestion-marker::before {
+.suggestion-marker::before {
   content: "";
   width: 5px;
   height: 5px;
@@ -1214,7 +1216,7 @@ table caption {
  * C4-NF-03 measures the height of, so the marker there is the dot alone: the
  * words belong beside the input the reader edits, not in the summary they
  * read a row under. §4.1.1 permits either. */
-.rail-declarations .retained-marker, .rail-declarations .suggestion-marker {
+.rail-declarations .suggestion-marker {
   gap: 0;
   margin-left: 5px;
   font-size: 0;
@@ -1302,20 +1304,8 @@ table caption {
   color: var(--text-secondary);
 }
 
-/* The one line that explains the markers, on the first panel carrying any. */
-.retention-note {
-  margin: 0 0 12px;
-  padding: 8px 10px;
-  border-left: 2px solid var(--brand-amber);
-  background: var(--attention-wash);
-  border-radius: var(--radius-sm);
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-/* "Confirm these values", in the panel header beside Change. Quiet: it is an
-   acknowledgement, not the primary action of the panel. */
+/* "Confirm the suggested values", in the panel header beside Change. Quiet:
+   it is an acknowledgement, not the primary action of the panel. */
 button.confirm-values {
   padding: 3px 9px;
   border: 1px solid var(--border);
@@ -1373,8 +1363,8 @@ button.confirm-values:hover, button.confirm-values:focus-visible {
  * The C4-NF-07 accommodation: the declaration stays on screen, the fields
  * that captured it do not. C4-NF-03 itself is carried by `.series-sticky`,
  * not by this collapse; this panel lives in `.stack`, a column the sticky
- * rail does not travel with, so its `retained-marker` here is a courtesy for
- * the reader looking at this column, not the property NF-03 requires. */
+ * rail does not travel with, so what it shows here is a courtesy for the
+ * reader looking at this column, not the property NF-03 requires. */
 .panel-collapsed .panel-head { border-bottom: none; }
 .panel-summary {
   padding: 0 16px 13px 46px;

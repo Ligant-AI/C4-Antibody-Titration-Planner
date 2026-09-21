@@ -56,7 +56,6 @@ import { PRECISION_STATEMENT } from './format'
 import { TOOL_ID, TOOL_NAME } from './site'
 import { FORMS, FORM_LABEL, type FormId } from './units'
 import type { SeriesInputs } from './normalise'
-import type { RetainableField } from './retention'
 
 export const SCHEMA_NAME = 'ligant-benchtools-c4-series'
 
@@ -69,13 +68,27 @@ export const SCHEMA_NAME = 'ligant-benchtools-c4-series'
  * object. C1 draws the same distinction for the same reason.
  */
 /**
- * Bumped to 1.1.0, 15 September 2026: `declarations.retained` is new
+ * Bumped to 1.1.0, 15 September 2026: `declarations.retained` was new
  * (Nadira's review, item 2). Additive and backward compatible, a consumer
- * reading a 1.0.0 object never sees it and one reading a 1.1.0 object that
- * does not know it can ignore it, so this is a minor version, not a major
- * one; nothing already on the object changed shape.
+ * reading a 1.0.0 object never saw it and one reading a 1.1.0 object that did
+ * not know it could ignore it, so that was a minor version, not a major one;
+ * nothing already on the object changed shape.
+ *
+ * Bumped to 2.0.0, 21 September 2026: `declarations.retained` is GONE, with
+ * the origin storage it described (finding B2). This one is major, because
+ * removal is the direction semver calls breaking: a consumer written against
+ * 1.1.0 may read that key and would now find nothing. The object is once
+ * again shaped exactly as 1.0.0 was, and 1.0.0 was deliberately not reused
+ * for it: two artefacts a week apart would then be indistinguishable by
+ * version, and the version is the only thing on the object that records that
+ * this tool no longer makes the retained/entered distinction at all.
+ *
+ * No consumer is known to exist. C1 does not read this object (open item 8,
+ * the two schemas coexist and C1 does not migrate) and C3 is not built (open
+ * item 9). If that is wrong, the bump is the thing to revisit, not the
+ * removal.
  */
-export const SCHEMA_VERSION = '1.1.0'
+export const SCHEMA_VERSION = '2.0.0'
 
 /** A number that means nothing without its unit, carrying it. C1's shape. */
 export interface Quantity<U extends string = string> {
@@ -164,14 +177,6 @@ export interface StructuredResult {
     pipettingMinimum: Quantity & { provenance: 'entered' | 'default' }
     /** C4-SC-04. Recorded as a declaration; no threshold is applied to it. */
     cellDensity: Quantity
-    /**
-     * C4-ST-03 and C4-NF-07, Nadira's review, item 2. Which declarations this
-     * series was computed under still hold a value restored from a previous
-     * session and not confirmed or edited in this one, alongside the existing
-     * `pipettingMinimum.provenance`. Empty when nothing was retained, which is
-     * the honest state for a series built entirely from this session's input.
-     */
-    retained: readonly RetainableField[]
     imported: {
       molecularWeight: Quantity
       provenance: string
@@ -295,7 +300,6 @@ export function toStructuredResult(result: SeriesResult): StructuredResult {
         provenance: inputs.pipettingMinimum.provenance,
       },
       cellDensity: { value: base.cellsPerUl, unit: 'cells/uL', underflowed: false },
-      retained: inputs.retainedFields ?? [],
       imported:
         inputs.imported === null
           ? null

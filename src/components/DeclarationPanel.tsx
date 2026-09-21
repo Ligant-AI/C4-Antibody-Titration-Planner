@@ -19,9 +19,8 @@
  * panel lives in `.stack`, a column the sticky rail (the series, the flags)
  * does not travel with, so its collapsed summary being on screen proves
  * nothing about what is on screen once the reader has scrolled past it. The
- * `retained` badge here is a courtesy for the column the reader is actually
- * looking at; the property NF-03 requires is carried by `.rail-declarations`
- * in `SeriesTable.tsx`, which repeats these same values inside the rail.
+ * property NF-03 requires is carried by `.rail-declarations` in
+ * `SeriesTable.tsx`, which repeats these same values inside the rail.
  *
  * THE GROUND RULE IS PRESERVED. Method is chosen before data entry, and the
  * panels are ordered so that a user cannot reach a computation without having
@@ -29,7 +28,7 @@
  * so it can never carry a user past a declaration they have not made.
  */
 import { useState, type ReactNode } from 'react'
-import { CONFIRM_TOOLTIP } from '../lib/retention'
+import { CONFIRM_TOOLTIP } from '../lib/suggestions'
 
 interface Props {
   step: number
@@ -48,20 +47,10 @@ interface Props {
    */
   complete: boolean
   /**
-   * True if any field in this panel still holds a value carried over from a
-   * previous session and not yet confirmed or edited in this one. Shown only
-   * while collapsed: an expanded panel already marks the field itself.
-   */
-  retained?: boolean
-  /**
-   * Stand behind every unconfirmed value in this panel at once.
+   * Stand behind every value in this panel the TOOL filled in.
    *
-   * The gap that made the marker feel like noise rather than information:
-   * editing a field cleared its own mark, so a reader who had checked a
-   * restored declaration and found it correct had no way to say so, and the
-   * only route to a clean form was to retype values that were already right.
-   * Absent where the panel has nothing outstanding, rather than rendered as
-   * a control that would do nothing.
+   * Absent where the panel has no suggestion outstanding, rather than
+   * rendered as a control that would do nothing.
    */
   onConfirm?: () => void
   /**
@@ -76,12 +65,6 @@ interface Props {
    * suggestion is outstanding the label says so.
    */
   confirmLabel?: string
-  /**
-   * Shown once, above the fields, on the first panel carrying anything from
-   * a previous visit. Not repeated per panel: the explanation is the same
-   * everywhere, and repeating it is how a page teaches a reader to skip it.
-   */
-  note?: ReactNode
   children: ReactNode
 }
 
@@ -90,10 +73,8 @@ export function DeclarationPanel({
   title,
   summary,
   complete,
-  retained = false,
   onConfirm,
   confirmLabel = 'Confirm these values',
-  note,
   children,
 }: Props) {
   // Null until the reader expresses a preference, after which theirs wins. A
@@ -107,7 +88,6 @@ export function DeclarationPanel({
         <div className="titles">
           <span className="step">{step}</span>
           <h2>{title}</h2>
-          {!expanded && retained && <span className="retained-marker">from your last visit</span>}
         </div>
         <div className="panel-head-actions">
           {onConfirm && (
@@ -133,15 +113,9 @@ export function DeclarationPanel({
         </div>
       </div>
       {expanded ? (
-        <div className="panel-body stack" style={{ gap: 14 }}>
-          {note}
-          {children}
-        </div>
+        <div className="panel-body stack" style={{ gap: 14 }}>{children}</div>
       ) : (
-        <div className="panel-body panel-summary">
-          {note}
-          {summary}
-        </div>
+        <div className="panel-body panel-summary">{summary}</div>
       )}
     </section>
   )

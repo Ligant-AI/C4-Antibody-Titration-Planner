@@ -27,7 +27,6 @@ import {
 } from '../lib/flags'
 import { PRECISION_STATEMENT } from '../lib/format'
 import { INTEGRITY_SCOPE_STATEMENT } from '../lib/transport'
-import { RETENTION_STATEMENT } from '../lib/retention'
 import { URS_VERSION } from '../lib/site'
 
 /** Turns the corpus convention `*emphasis*` into markup at render time. */
@@ -43,8 +42,6 @@ function withEmphasis(text: string) {
 
 interface Props {
   result: SeriesResult | null
-  storageKeys: readonly string[]
-  onClearStorage: () => void
   /**
    * Whether an import was decoded, successfully or not, this session. There is
    * no on-page control that offers an import: an object arrives only if the
@@ -54,7 +51,7 @@ interface Props {
   importAttempted: boolean
 }
 
-export function Method({ result, storageKeys, onClearStorage, importAttempted }: Props) {
+export function Method({ result, importAttempted }: Props) {
   return (
     <section className="panel method-panel">
       <div className="panel-head">
@@ -97,7 +94,6 @@ export function Method({ result, storageKeys, onClearStorage, importAttempted }:
           <li>{PRECISION_STATEMENT}</li>
           <li>{THRESHOLD_EVALUATION_STATEMENT}</li>
           <li>{RATIO_TEST_BLIND_SPOT_STATEMENT}</li>
-          <li>{RETENTION_STATEMENT}</li>
           {importAttempted && <li>{INTEGRITY_SCOPE_STATEMENT}</li>}
         </ul>
 
@@ -160,7 +156,7 @@ export function Method({ result, storageKeys, onClearStorage, importAttempted }:
           </table>
         </div>
 
-        <PrivacyPanel storageKeys={storageKeys} onClearStorage={onClearStorage} />
+        <PrivacyPanel />
 
         <h3>Specification</h3>
         <p className="hint">

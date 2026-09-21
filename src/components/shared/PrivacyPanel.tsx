@@ -5,19 +5,21 @@
  * product's central claim. Two copies would drift, and a tool that quietly
  * lacked this section would undercut the claim everywhere else.
  *
- * Every storage key the tool writes is named here. scripts/check-network.mjs
- * reads every key the page actually writes and fails the build unless each one
- * appears verbatim inside a `code` element, so a key that is written but not
- * disclosed cannot ship.
+ * THIS TOOL STORES NOTHING IN THE BROWSER. It used to write one key holding
+ * the declarations on screen, and finding B2 removed it: the declarations now
+ * live in the tab and nowhere else. scripts/check-network.mjs drives a whole
+ * session in a real browser with every storage accessor instrumented, and
+ * fails the build if the page reads or writes any of them, so the sentence
+ * below cannot quietly stop being true.
+ *
+ * This component is shared across the bench tools. C4 is the first to write
+ * nothing at all, so its copy has diverged from the sibling tools' and the
+ * `storageKeys` and `onClearStorage` props are gone with the feature they
+ * described.
  */
 import { NETWORK_CLAIM_VERIFIED } from '../../lib/site'
 
-interface Props {
-  storageKeys: readonly string[]
-  onClearStorage: () => void
-}
-
-export function PrivacyPanel({ storageKeys, onClearStorage }: Props) {
+export function PrivacyPanel() {
   return (
     <>
       <h3>Privacy</h3>
@@ -44,21 +46,12 @@ export function PrivacyPanel({ storageKeys, onClearStorage }: Props) {
           </>
         )}
       </p>
-      <p>Stored in this browser, and nowhere else:</p>
-      <ul>
-        {storageKeys.map((key) => (
-          <li key={key}>
-            <code>{key}</code> holds the declarations currently on screen, so that a page reload
-            does not discard work in progress. Anything restored from it is marked as retained until
-            you confirm it.
-          </li>
-        ))}
-      </ul>
-      <div className="button-row">
-        <button type="button" onClick={onClearStorage}>
-          Clear stored data
-        </button>
-      </div>
+      <p>
+        Nothing is stored in this browser either. The tool writes no cookie and no site data of any
+        kind, so what you enter lives in this tab for as long as the tab does and is gone when you
+        close or reload it. There is nothing to clear, and a reload starts an empty page rather than
+        returning declarations you made under conditions that may since have changed.
+      </p>
     </>
   )
 }
