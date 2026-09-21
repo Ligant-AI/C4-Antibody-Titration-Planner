@@ -42,9 +42,11 @@ export const CONFIRM_TOOLTIP =
  *
  * `CONFIRM_LABEL_DEFAULT` is the honest label for a panel with no outstanding
  * suggestion. With the retained markers gone the control is offered only where
- * a suggestion IS outstanding, so nothing reaches it on the rendered page
- * today; it is kept as the explicit default rather than leaving the label to
- * an invariant a later panel could quietly break.
+ * a suggestion IS outstanding, so this label is still COMPUTED for panels 2
+ * and 4, which hold no suggestion, and never rendered: their `onConfirm` is
+ * undefined, so the button they would label does not exist. Kept as the
+ * explicit default rather than leaving the label to an invariant a later
+ * panel could quietly break.
  */
 export const CONFIRM_LABEL_DEFAULT = 'Confirm these values'
 export const CONFIRM_LABEL_SUGGESTED_UNIT = 'Confirm the suggested unit'

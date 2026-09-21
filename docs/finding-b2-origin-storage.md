@@ -103,7 +103,14 @@ rename.
    C4-ST-04, and interactive: a stock declaration changing under an entered
    top point is still reachable by editing, which was always the main path.
    Only its invocation from the load path went, because there is no load path.
-3. **The suggestion marker's styling stays.** It shared every CSS rule with
+3. **Two uses of the word "persisted" stay, because they are a different
+   word.** `reimpl/fixtures.json` line 173 and `src/lib/determinism.test.ts`
+   line 152 both say "the persisted input" or "the retained input" about the
+   top point surviving a change of stock declaration WITHIN a session. That is
+   C4-SR-01, the entered value being the thing recomputed from, and has nothing
+   to do with storage. Checked and left alone; noted here because a reviewer
+   grepping for "persist" will find them.
+4. **The suggestion marker's styling stays.** It shared every CSS rule with
    `.retained-marker`. The selectors were split rather than deleted, which is
    the failure mode a careless removal would have had: a marker still rendered
    and silently unstyled.
@@ -168,3 +175,12 @@ deploys is appended to
 `docs/open-item-17-deployed-network-verification.md` in the usual way. The
 summary line that record quotes has changed shape with this work, and the note
 appended there says so.
+
+**This one is the owner's to decide, and it is a second decision, not the
+same one as the schema bump.** Every precedent for leaving the flag set across
+a page change was a deploy-then-verify inside the same working session, where
+the gap was hours. This is a hotfix on a branch, and if it sits unmerged or
+undeployed the footer goes on saying "confirmed against the page as served"
+about a page nobody is serving. The developer's reading is that the flag
+should stay set while this moves promptly to deploy, and should be unset if it
+is going to wait. That choice has not been made here.
