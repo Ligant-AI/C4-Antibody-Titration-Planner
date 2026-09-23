@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Masthead } from './components/shared/Masthead'
 import { SiteFooter } from './components/shared/SiteFooter'
 import { SkipLink } from './components/shared/SkipLink'
@@ -10,7 +10,6 @@ import { SeriesTable, notebookLine, vendorBasisSummary } from './components/Seri
 import { computeSeries, type Outcome } from './lib/compute'
 import {
   EMPTY_FORM,
-  hasContent,
   missingDeclarations,
   panelCompletion,
   reconcileTopPoint,
@@ -26,30 +25,12 @@ import {
   type ImportedMolecularWeight,
 } from './lib/normalise'
 import {
-  NOTHING_CONFIRMED,
-  NOTHING_RETAINED,
-  PANEL_FIELDS,
-  RETAINABLE_FIELDS,
-  RETAINED_MARKER_LABEL,
-  RETAINED_MARKER_TOOLTIP,
   CONFIRM_LABEL_DEFAULT,
   CONFIRM_LABEL_SUGGESTED_UNIT,
   CONFIRM_LABEL_SUGGESTED_VALUES,
-  RETENTION_PANEL_NOTE,
-  STORAGE_KEY,
   SUGGESTION_MARKER_LABEL,
   SUGGESTION_MARKER_TOOLTIP,
-  confirmFields,
-  confirmedToList,
-  heldOnRestore,
-  persist,
-  restoreInputs,
-  retainedMarks,
-  splitStored,
-  type ConfirmedFields,
-  type RetainableField,
-  type RetainedFields,
-} from './lib/retention'
+} from './lib/suggestions'
 import { FieldHelp, FieldHelpProvider } from './components/shared/FieldHelp'
 import { decodeEnvelope } from './lib/transport'
 import { toJson } from './lib/serialise'
@@ -105,88 +86,15 @@ const TOP_FORM_OPTIONS: readonly { form: TopPointForm; label: string }[] = [
 ]
 
 /**
- * Which form field, if any, corresponds to each persisted key.
+ * FINDING B2. The page opens EMPTY, every time.
  *
- * The retention marker is per field (C4-ST-03), so a restore has to know which
- * fields actually came back holding something.
+ * There was a `loadForm` here that read `c4.state.v1` out of origin storage
+ * and a `Retained` badge that marked every field it brought back. Both are
+ * gone: nothing is written, so there is nothing to read, and C4-ST-03's
+ * condition (no input persists across a reload unless its persistence is
+ * visible on screen) is met by the absence rather than by the disclosure.
+ * `docs/finding-b2-origin-storage.md` records why.
  */
-const FIELD_OF: Partial<Record<keyof FormState, RetainableField>> = {
-  stockValue: 'stockConcentration',
-  stockSource: 'stockSource',
-  stockMassBasis: 'stockMassBasis',
-  vendorBasis: 'vendorBasis',
-  vendorAmountValue: 'vendorAmount',
-  vendorTestVolume: 'vendorTestVolume',
-  vendorCells: 'vendorCellNumber',
-  stainingVolume: 'stainingVolume',
-  cellNumber: 'cellNumber',
-  pipettingMinimum: 'pipettingMinimum',
-  topValue: 'topPoint',
-  dilutionFactor: 'dilutionFactor',
-  points: 'points',
-}
-
-interface LoadedForm {
-  form: FormState
-  /** Which fields came back from storage actually holding a value. */
-  held: RetainedFields
-  /** Which the reader had already stood behind, in some previous session. */
-  confirmed: ConfirmedFields
-  topPointNeedsReentry: boolean
-}
-
-const EMPTY_LOAD: LoadedForm = {
-  form: EMPTY_FORM,
-  held: NOTHING_RETAINED,
-  confirmed: NOTHING_CONFIRMED,
-  topPointNeedsReentry: false,
-}
-
-function loadForm(): LoadedForm {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw === null) return EMPTY_LOAD
-    const { form: storedForm, confirmed } = splitStored(JSON.parse(raw))
-    const restored = restoreInputs(storedForm, EMPTY_FORM)
-    const held: Partial<Record<RetainableField, boolean>> = {}
-    for (const [key, field] of Object.entries(FIELD_OF) as [keyof FormState, RetainableField][]) {
-      const value = restored[key]
-      // Only fields that actually HOLD something are marked. Badging an empty
-      // field teaches the reader that the badge means nothing.
-      if (typeof value === 'string' && value.trim() !== '') held[field] = true
-    }
-    // C4-ST-04. A document written before this rule existed, or edited by
-    // hand, can hold a topForm that no longer matches stockKind. Corrected on
-    // load rather than trusted, the same as the interactive change.
-    const { form: reconciled, invalidated } = reconcileTopPoint(restored)
-    if (invalidated) held.topPoint = false
-    return {
-      form: reconciled,
-      held: heldOnRestore(held),
-      confirmed,
-      topPointNeedsReentry: invalidated,
-    }
-  } catch {
-    return EMPTY_LOAD
-  }
-}
-
-/**
- * C4-ST-03. Shown against any field whose value was carried over.
- *
- * Carries its own explanation, because the badge that prompted this rework
- * was unexplained anywhere on the page: a reader met it eleven times over and
- * had no way to find out what they were being told.
- */
-function Retained({ when, field }: { when: boolean; field: string }) {
-  if (!when) return null
-  return (
-    <span className="retained-marker">
-      {RETAINED_MARKER_LABEL}
-      <FieldHelp id={`retained-${field}`} label="carried over from your last visit" text={RETAINED_MARKER_TOOLTIP} />
-    </span>
-  )
-}
 
 /** C4-SR-01 and C4-UN-01. Shown against a value the tool proposed. */
 function Suggested({ when, field }: { when: boolean; field: string }) {
@@ -202,8 +110,8 @@ function Suggested({ when, field }: { when: boolean; field: string }) {
 /**
  * C4-ST-04. Shown against the top point when its declared form stopped being
  * computable under the stock declaration and was cleared rather than
- * relabelled. Distinct from `Retained`: this field was not carried over, it
- * was emptied because what it held no longer means anything.
+ * relabelled: what the field held no longer means anything, so it says so
+ * instead of being silently relabelled.
  */
 function NeedsReentry({ when }: { when: boolean }) {
   if (!when) return null
@@ -274,20 +182,8 @@ function panelSummaries(form: FormState) {
 }
 
 export default function App() {
-  const initial = useMemo(loadForm, [])
-  const [form, setForm] = useState<FormState>(initial.form)
-  /**
-   * `held` is fixed at load: which fields came back from storage holding a
-   * value. `confirmed` grows as the reader edits or confirms, and is what
-   * gets persisted. The visible marks are DERIVED from the two rather than
-   * being a third piece of state, so they cannot drift from either, and so
-   * that a confirmation surviving a reload is structural rather than
-   * something a future edit could forget to re-apply.
-   */
-  const [held] = useState<RetainedFields>(initial.held)
-  const [confirmed, setConfirmed] = useState<ConfirmedFields>(initial.confirmed)
-  const retained = useMemo(() => retainedMarks(held, confirmed), [held, confirmed])
-  const [topPointNeedsReentry, setTopPointNeedsReentry] = useState(initial.topPointNeedsReentry)
+  const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [topPointNeedsReentry, setTopPointNeedsReentry] = useState(false)
   const [imported, setImported] = useState<ImportedMolecularWeight | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -334,39 +230,26 @@ export default function App() {
   }, [])
 
   /*
-   * C4-ST-03. Storage mirrors work in progress: no work, no key.
-   *
-   * The confirmation set travels WITH the form, in one document, because the
-   * two are only meaningful together: a confirmation naming a value that is
-   * no longer there says nothing, and a value with its confirmation lost
-   * comes back claiming to be unreviewed. `hasContent` still reads the form
-   * alone, so "Clear stored data" keeps removing the key rather than leaving
-   * a document behind that holds only confirmations.
+   * FINDING B2. There is no effect here writing the form anywhere, and that
+   * is the fix: the declarations exist in this tab and nowhere else, for as
+   * long as the tab does.
    */
-  useEffect(() => {
-    persist(STORAGE_KEY, { form, confirmed: confirmedToList(confirmed) }, hasContent(form))
-  }, [form, confirmed])
-
-  /** Editing a field confirms THAT field, and says nothing about any other. */
   const set = <K extends keyof FormState>(key: K) => (value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
-    const field = FIELD_OF[key]
-    if (field !== undefined) setConfirmed((current) => confirmFields(current, [field]))
     setCopied(false)
   }
 
   /**
-   * Stand behind everything a panel is still carrying unconfirmed.
+   * Stand behind the values the TOOL pre-filled in a panel.
    *
-   * Clears the retained marks for its fields, and the suggestion markers on
-   * the values the tool pre-filled in that panel. It deliberately does NOT
-   * touch `pipettingMinimumEntered`: that is the engine's provenance, and a
-   * reader confirming that the suggested 2 µL is what they want has agreed to
-   * the default, not entered a value of their own. C4-SR-05 requires the
-   * output to keep saying which of those two happened, so it keeps saying it.
+   * Clears the suggestion markers on that panel's pre-filled values. It
+   * deliberately does NOT touch `pipettingMinimumEntered`: that is the
+   * engine's provenance, and a reader confirming that the suggested 2 µL is
+   * what they want has agreed to the default, not entered a value of their
+   * own. C4-SR-05 requires the output to keep saying which of those two
+   * happened, so it keeps saying it.
    */
   const confirmPanel = (step: number) => () => {
-    setConfirmed((current) => confirmFields(current, PANEL_FIELDS[step] ?? []))
     if (step === 1) setForm((current) => ({ ...current, stockUnitChosen: true }))
     if (step === 3) {
       setForm((current) => ({
@@ -380,19 +263,17 @@ export default function App() {
   }
 
   /**
-   * Whether a panel still has anything outstanding for the reader to stand
-   * behind.
+   * Whether a panel still has a suggestion outstanding for the reader to
+   * stand behind.
    *
-   * A carried-over value always counts, whatever else the panel holds. A
-   * suggestion the tool pre-filled counts only once the panel has actually
-   * been answered: offering "Confirm these values" against an untouched,
-   * empty panel asks the reader to stand behind nothing, and a control that
-   * does nothing the first four times it is seen is a control nobody reads
-   * the fifth time.
+   * A suggestion the tool pre-filled counts only once the panel has actually
+   * been answered: offering "Confirm the suggested values" against an
+   * untouched, empty panel asks the reader to stand behind nothing, and a
+   * control that does nothing the first four times it is seen is a control
+   * nobody reads the fifth time. Panels 2 and 4 hold no suggestion at all, so
+   * the control never appears on them.
    */
   const panelHasUnconfirmed = (step: number, isComplete: boolean): boolean => {
-    const fields = PANEL_FIELDS[step] ?? []
-    if (fields.some((field) => retained[field])) return true
     if (!isComplete) return false
     if (step === 1) return !form.stockUnitChosen
     if (step === 3) {
@@ -436,22 +317,10 @@ export default function App() {
       : CONFIRM_LABEL_SUGGESTED_VALUES
   }
 
-  /*
-   * The explanation line, shown once, on the first panel that is actually
-   * carrying something from a previous visit. Repeating it on every panel is
-   * how a page teaches a reader to stop seeing it.
-   */
-  const firstRetainedPanel = [1, 2, 3, 4].find((step) =>
-    (PANEL_FIELDS[step] ?? []).some((field) => retained[field]),
-  )
-  const retentionNote = (step: number) =>
-    step === firstRetainedPanel ? <p className="retention-note">{RETENTION_PANEL_NOTE}</p> : undefined
-
   const summaries = panelSummaries(form)
   const complete = panelCompletion(form)
   const missing = missingDeclarations(form)
-  const retainedFieldList = RETAINABLE_FIELDS.filter((field) => retained[field])
-  const inputs = toSeriesInputs(form, imported, retainedFieldList)
+  const inputs = toSeriesInputs(form, imported)
   const outcome: Outcome | null = inputs === null ? null : computeSeries(inputs)
   const result = outcome !== null && outcome.ok ? outcome : null
   const rejections = outcome !== null && !outcome.ok ? outcome.rejections : []
@@ -490,17 +359,6 @@ export default function App() {
     return () => observer.disconnect()
   }, [result !== null])
 
-  const clearStorage = () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-    } catch {
-      // Nothing to clear if storage was never available.
-    }
-    setForm(EMPTY_FORM)
-    setConfirmed(NOTHING_CONFIRMED)
-    setTopPointNeedsReentry(false)
-  }
-
   const copyForNotebook = async () => {
     if (result === null) return
     try {
@@ -533,10 +391,8 @@ export default function App() {
               title="Antibody stock"
               summary={summaries.stock}
               complete={complete.stock && result !== null}
-              retained={retained.stockConcentration || retained.stockSource || retained.stockMassBasis}
               onConfirm={panelHasUnconfirmed(1, complete.stock) ? confirmPanel(1) : undefined}
               confirmLabel={confirmLabelFor(1)}
-              note={retentionNote(1)}
             >
                 <div className="field">
                   <label htmlFor="stock-kind">
@@ -552,10 +408,7 @@ export default function App() {
                         stockKind,
                       })
                       setForm(reconciled)
-                      if (invalidated) {
-                        setConfirmed((current) => confirmFields(current, ['topPoint']))
-                        setTopPointNeedsReentry(true)
-                      }
+                      if (invalidated) setTopPointNeedsReentry(true)
                       setCopied(false)
                     }}
                   >
@@ -572,7 +425,6 @@ export default function App() {
                       <div className="field">
                         <label htmlFor="stock-value">
                           Stock concentration <FieldHelp id="stock-value" label="Stock concentration" />
-                          <Retained when={retained.stockConcentration} field="stockConcentration" />
                         </label>
                         <input
                           id="stock-value"
@@ -609,7 +461,6 @@ export default function App() {
                       <label htmlFor="stock-mass-basis">
                         The stated mass is the mass of{' '}
                         <FieldHelp id="stock-mass-basis" label="The stated mass is the mass of" />
-                        <Retained when={retained.stockMassBasis} field="stockMassBasis" />
                       </label>
                       <select
                         id="stock-mass-basis"
@@ -631,7 +482,6 @@ export default function App() {
                   <label htmlFor="stock-source">
                     Where the concentration came from{' '}
                     <FieldHelp id="stock-source" label="Where the concentration came from" />
-                    <Retained when={retained.stockSource} field="stockSource" />
                   </label>
                   <select
                     id="stock-source"
@@ -656,16 +506,13 @@ export default function App() {
               title="Vendor recommendation"
               summary={summaries.vendor}
               complete={complete.vendor && result !== null}
-              retained={retained.vendorBasis || retained.vendorAmount || retained.vendorTestVolume || retained.vendorCellNumber}
               onConfirm={panelHasUnconfirmed(2, complete.vendor) ? confirmPanel(2) : undefined}
               confirmLabel={confirmLabelFor(2)}
-              note={retentionNote(2)}
             >
                 <div className="field">
                   <label htmlFor="vendor-basis">
                     Basis of the recommendation{' '}
                     <FieldHelp id="vendor-basis" label="Basis of the recommendation" />
-                    <Retained when={retained.vendorBasis} field="vendorBasis" />
                   </label>
                   <select
                     id="vendor-basis"
@@ -686,7 +533,6 @@ export default function App() {
                     <div className="field">
                       <label htmlFor="vendor-amount">
                         Amount per test <FieldHelp id="vendor-amount" label="Amount per test" />
-                        <Retained when={retained.vendorAmount} field="vendorAmount" />
                       </label>
                       <input
                         id="vendor-amount"
@@ -726,7 +572,6 @@ export default function App() {
                       <label htmlFor="vendor-test-volume">
                         Vendor test volume{' '}
                         <FieldHelp id="vendor-test-volume" label="Vendor test volume" />
-                        <Retained when={retained.vendorTestVolume} field="vendorTestVolume" />
                       </label>
                       <input
                         id="vendor-test-volume"
@@ -757,7 +602,7 @@ export default function App() {
                   <div className="field-row">
                     <div className="field">
                       <label htmlFor="vendor-concentration">
-                        Recommended <Retained when={retained.vendorAmount} field="vendorAmountConc" />
+                        Recommended
                       </label>
                       <input
                         id="vendor-concentration"
@@ -818,7 +663,6 @@ export default function App() {
                           <label htmlFor="vendor-cells">
                             Vendor's stated cells per test{' '}
                             <FieldHelp id="vendor-cells" label="Vendor's stated cells per test" />
-                            <Retained when={retained.vendorCellNumber} field="vendorCellNumber" />
                           </label>
                           <input
                             id="vendor-cells"
@@ -854,16 +698,13 @@ export default function App() {
               title="Staining context"
               summary={summaries.context}
               complete={complete.context && result !== null}
-              retained={retained.stainingVolume || retained.cellNumber || retained.pipettingMinimum}
               onConfirm={panelHasUnconfirmed(3, complete.context) ? confirmPanel(3) : undefined}
               confirmLabel={confirmLabelFor(3)}
-              note={retentionNote(3)}
             >
                 <div className="field-row">
                   <div className="field">
                     <label htmlFor="staining-volume">
                       Staining volume <FieldHelp id="staining-volume" label="Staining volume" />
-                      <Retained when={retained.stainingVolume} field="stainingVolume" />
                     </label>
                     <input
                       id="staining-volume"
@@ -898,7 +739,6 @@ export default function App() {
                   <div className="field">
                     <label htmlFor="cell-number">
                       Cells per test <FieldHelp id="cell-number" label="Cells per test" />
-                      <Retained when={retained.cellNumber} field="cellNumber" />
                     </label>
                     <input
                       id="cell-number"
@@ -942,7 +782,6 @@ export default function App() {
                       when={!form.pipettingMinimumEntered && !form.pipettingMinimumConfirmed}
                       field="pipettingMinimum"
                     />
-                    <Retained when={retained.pipettingMinimum} field="pipettingMinimum" />
                   </label>
                   <input
                     id="pipetting-minimum"
@@ -965,16 +804,14 @@ export default function App() {
               title="Series design"
               summary={summaries.design}
               complete={complete.design && result !== null}
-              retained={retained.topPoint || retained.dilutionFactor || retained.points}
               onConfirm={panelHasUnconfirmed(4, complete.design) ? confirmPanel(4) : undefined}
               confirmLabel={confirmLabelFor(4)}
-              note={retentionNote(4)}
             >
                 <div className="field-row">
                   <div className="field">
                     <label htmlFor="top-value">
                       Top point <FieldHelp id="top-value" label="Top point" />
-                      <Retained when={retained.topPoint} field="topPoint" />{' '}
+                     
                       <NeedsReentry when={topPointNeedsReentry} />
                     </label>
                     <input
@@ -1013,9 +850,9 @@ export default function App() {
                 </div>
                 {/* Not `.hint`, and not guidance: this explains why a value
                     the reader entered is no longer there, which is a state
-                    message about what happened, in the same family as the
-                    retention note. Guidance about what to type in this field
-                    is behind the trigger on its label. */}
+                    message about what happened rather than advice about what
+                    to type. Guidance for this field is behind the trigger on
+                    its label. */}
                 {topPointNeedsReentry && (
                   <p className="field-note">
                     The top point was cleared: its form stopped being computable when the stock
@@ -1029,7 +866,6 @@ export default function App() {
                     <label htmlFor="dilution-factor">
                       Dilution factor between points{' '}
                       <FieldHelp id="dilution-factor" label="Dilution factor between points" />
-                      <Retained when={retained.dilutionFactor} field="dilutionFactor" />
                     </label>
                     <input
                       id="dilution-factor"
@@ -1043,7 +879,6 @@ export default function App() {
                   <div className="field">
                     <label htmlFor="points">
                       Points <FieldHelp id="points" label="Points" />
-                      <Retained when={retained.points} field="points" />
                     </label>
                     <input
                       id="points"
@@ -1061,8 +896,6 @@ export default function App() {
 
             <Method
               result={result}
-              storageKeys={[STORAGE_KEY]}
-              onClearStorage={clearStorage}
               importAttempted={imported !== null || importError !== null}
             />
           </div>
@@ -1131,11 +964,12 @@ export default function App() {
                       declaration line is six fields, not a paragraph per
                       field, and the flags are `FlagSummaryList`, one line
                       each behind an expander, with a fixed-height scroll of
-                      its own as a second, independent floor. Retained/default
-                      marks are C4-ST-03's other half: a reader must not read
-                      a row under a value carried from a previous session, or
-                      pre-filled by a suggestion, without being told so where
-                      the row itself is visible.
+                      its own as a second, independent floor. The suggestion
+                      marks travel with it: a reader must not read a row under
+                      a value the tool pre-filled without being told so where
+                      the row itself is visible. The carried-over marks that
+                      used to sit beside them went with the storage that
+                      produced them, finding B2.
                     */}
                     <div className="series-stuck-region">
                       <div className="series-sticky" ref={stickyRef}>
@@ -1144,14 +978,12 @@ export default function App() {
                             <dt>Staining volume</dt>
                             <dd>
                               {formatSigFigs(result.normalised.stainingVolumeUl)} {UNIT_LABEL.uL}, final
-                              <Retained when={retained.stainingVolume} field="rail-stainingVolume" />
                             </dd>
                           </div>
                           <div>
                             <dt>Cells per test</dt>
                             <dd>
                               {formatSigFigs(result.normalised.cells)}
-                              <Retained when={retained.cellNumber} field="rail-cellNumber" />
                             </dd>
                           </div>
                           <div>
@@ -1163,14 +995,12 @@ export default function App() {
                               {result.inputs.stock.kind === 'stated'
                                 ? `${result.inputs.stock.concentration.value} ${UNIT_LABEL[result.inputs.stock.concentration.unit]}, ${STOCK_SOURCE_LABEL[result.inputs.stockSource]}`
                                 : 'not stated by the vendor'}
-                              <Retained when={retained.stockConcentration || retained.stockSource} field="rail-stock" />
                             </dd>
                           </div>
                           <div>
                             <dt>Vendor basis</dt>
                             <dd>
                               {vendorBasisSummary(result)}
-                              <Retained when={retained.vendorBasis} field="rail-vendorBasis" />
                             </dd>
                           </div>
                           <div>
@@ -1181,7 +1011,6 @@ export default function App() {
                               {result.inputs.stock.kind === 'stated'
                                 ? STOCK_MASS_BASIS_SHORT[result.inputs.stock.massBasis]
                                 : 'not stated by the vendor'}
-                              <Retained when={retained.stockMassBasis} field="rail-stockMassBasis" />
                             </dd>
                           </div>
                           <div>
@@ -1189,7 +1018,6 @@ export default function App() {
                             <dd>
                               {formatSigFigs(result.normalised.pipettingMinimumUl)} {UNIT_LABEL.uL},{' '}
                               {result.inputs.pipettingMinimum.provenance === 'entered' ? 'entered' : 'suggested default'}
-                              <Retained when={retained.pipettingMinimum} field="rail-pipettingMinimum" />
                             </dd>
                           </div>
                         </dl>

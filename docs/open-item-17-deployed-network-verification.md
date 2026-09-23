@@ -93,6 +93,35 @@ acceptance 25 had never checked:
 ACCEPTANCE TEST 17: PASSED, at https://benchtools.ligant.ai/antibody-titration-planner/, 2026-09-17T16:55:28.241Z.
 ```
 
+## Lapsed, 21 September 2026: finding B2 changed the page
+
+Not a re-run. A note that one is owed.
+
+Finding B2 removed the origin storage (`docs/finding-b2-origin-storage.md`),
+which changes the page as served, so acceptance 17 lapses on its own terms
+until it is run against the deployed address again. Deploy, then:
+
+```
+node scripts/check-network.mjs https://benchtools.ligant.ai/antibody-titration-planner/
+```
+
+`NETWORK_CLAIM_VERIFIED` is left set. What gates that flag is this record, and
+the two passes above are unaltered facts about the dates they carry; unsetting
+it would change the footer's wording on the strength of a change that has not
+been deployed yet. This is the same posture the 16 and 17 September entries
+were made under.
+
+**Two things about the next run's output will differ from the blocks above,
+and neither is a regression.** The storage sentence, which read "Every storage
+key written is disclosed on the page, nothing survives a reload unmarked, and
+clearing stored data removes the key rather than rewriting it empty", now
+reads that the page read and wrote no browser storage at all across a full
+session and left a seeded foreign key untouched. And the second C4-NF-03
+measurement, the one taken against "a restored document with every declaration
+marked as carried over" at 208 px, is gone: no document can be restored, so
+there is no such state to measure. The four-flag measurement is unchanged and
+is still taken in both flag-expansion states.
+
 ## Context: the standing Cloudflare bot-challenge
 
 For most of this project's build, `benchtools.ligant.ai` and its subpaths

@@ -2,8 +2,10 @@
  * The form's own state, and the translation from it into declarations.
  *
  * Kept out of the component and expressed as data so that the gating rules of
- * acceptance 13 can be tested without a DOM, and so that what is persisted is a
- * flat, inspectable document rather than a React tree.
+ * acceptance 13 can be tested without a DOM, and so that the declarations are a
+ * flat, inspectable document rather than a React tree. Nothing here is written
+ * to origin storage: finding B2 removed that, and this state lives and dies
+ * with the tab.
  *
  * EVERY NUMERIC FIELD IS A STRING here and a number only after parsing. A field
  * the user is midway through typing is not a number, and storing it as one
@@ -26,7 +28,6 @@ import type {
   VendorBasis,
   VolumeUnit,
 } from './units'
-import type { RetainableField } from './retention'
 
 export interface FormState {
   stockKind: 'stated' | 'not-stated-by-vendor'
@@ -84,15 +85,12 @@ export interface FormState {
   cellNumberUnitChosen: boolean
 
   /**
-   * D3, Nadira's second review. A string, not `TopPointForm | ''`: every
-   * other optional select in this form (`stockMassBasis`, `stockSource`) is
-   * already `'' | <string union>`, which is what lets `restoreInputs` keep
-   * retaining it after this change. `TopPointForm` is a NUMBER type, so an
-   * unset value typed `''` and a chosen value typed `3` would disagree in
-   * `typeof`, and `restoreInputs`'s deliberately strict type check discards
-   * anything that does not match `typeof EMPTY_FORM.topForm` on restore,
-   * silently dropping every retained top-point form forever, not only the
-   * ones written before this change.
+   * D3, Nadira's second review. A string, not `TopPointForm | ''`, so that it
+   * matches every other optional select in this form (`stockMassBasis`,
+   * `stockSource`), each already `'' | <string union>`. `TopPointForm` is a
+   * NUMBER type, so an unset value typed `''` and a chosen value typed `3`
+   * disagree in `typeof`, which is a trap for anything that reconstructs this
+   * form from a plain object and checks types as it goes.
    */
   topForm: '' | `${TopPointForm}`
   topValue: string
@@ -187,9 +185,9 @@ export function parseNumber(raw: string): number | null {
  * the same treatment C4-ST-04 gives any declaration whose premise changed
  * under it, rather than a value the tool relabels on the user's behalf.
  *
- * Called from both the interactive stock-kind change and a restore from
- * storage, so the two paths cannot drift apart and a value written before
- * this rule existed is corrected on load rather than trusted.
+ * Called from the interactive stock-kind change, which since finding B2 is
+ * the only way a stock declaration can change under an already-entered top
+ * point: nothing is restored from a previous visit for it to change under.
  */
 export function reconcileTopPoint(form: FormState): { form: FormState; invalidated: boolean } {
   // Unset is never invalid: there is nothing yet for a change of stock kind
@@ -326,7 +324,6 @@ function topPoint(form: FormState): SeriesInputs['topPoint'] {
 export function toSeriesInputs(
   form: FormState,
   imported: ImportedMolecularWeight | null,
-  retainedFields: readonly RetainableField[] = [],
 ): SeriesInputs | null {
   if (missingDeclarations(form).length > 0) return null
 
@@ -354,20 +351,7 @@ export function toSeriesInputs(
     dilutionFactor: parseNumber(form.dilutionFactor) as number,
     points: parseNumber(form.points) as number,
     imported,
-    retainedFields,
   }
-}
-
-/** Whether the form holds anything worth persisting. Storage mirrors work. */
-export function hasContent(form: FormState): boolean {
-  return (
-    parseNumber(form.stockValue) !== null ||
-    parseNumber(form.stainingVolume) !== null ||
-    parseNumber(form.cellNumber) !== null ||
-    parseNumber(form.topValue) !== null ||
-    form.stockSource !== '' ||
-    form.stockMassBasis !== ''
-  )
 }
 
 /**

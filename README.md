@@ -89,7 +89,7 @@ you can see its output it has already rounded.
 
 Same inputs, same outputs. Nothing reads a clock or a random source.
 
-- 278 tests, including the reference case of the specification asserted value by
+- 271 tests, including the reference case of the specification asserted value by
   value, the negative control asserted to raise no flags at all, and every
   rejection and flag condition.
 - An **independent Python reimplementation** in `reimpl/`, written from the
@@ -125,9 +125,16 @@ establish what a future deploy, a Cloudflare configuration change or a
 host-side injection will serve. That is why the check is re-run after every
 deploy, and why the record carries a date and an address rather than a tick.
 
-The tool writes one key, `c4.state.v1`, holding the declarations currently on
-screen so a reload does not discard work in progress. Anything restored from it
-is marked as retained until you confirm it. "Clear stored data" removes the key.
+**Nothing is stored in your browser either.** No cookie, no site data of any
+kind. What you enter lives in the tab for as long as the tab does, and a reload
+starts an empty page rather than returning declarations you made under
+conditions that may since have changed.
+
+The tool used to write one key holding the declarations on screen. Finding B2
+removed it, and `check:network` now instruments every storage accessor before
+any page script runs, drives a full session, and fails the build on a single
+call, a read as readily as a write. `docs/finding-b2-origin-storage.md` is the
+record, including the two inserted defects that confirmed the check can fail.
 
 ## Running it
 
@@ -192,7 +199,8 @@ this repository are written up in `docs/`:
 | 8, the shared result object | **Escalated.** It cannot express a series; C1 does not migrate, the two schemas coexist |
 | 9, the transport and its integrity check | Designed and built |
 | 16, the shipped calculator's conformance | Tie-breaking direction measured, conforms. Displayed precision does not match C4's for most of its range |
-| 17, the deployed-address verification | **Passed and recorded**, 16 September 2026, and again the same day after the page changed. Re-run after every deploy |
+| 17, the deployed-address verification | **Passed and recorded**, 16 September 2026, and twice since after the page changed. **Lapsed** pending a re-run after finding B2 deploys. Re-run after every deploy |
+| B2, the origin storage | **Closed by removal**, 21 September 2026. The page reads and writes no browser storage, gated in a real browser |
 
 One limitation is worth knowing before you use this:
 

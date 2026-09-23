@@ -107,6 +107,65 @@ const browser = await chromium.launch({
 // this figure is measured against.
 const page = await browser.newPage({ viewport: { width: 1366, height: 650 } })
 
+/* ---------------------------------------------------------------------- *
+ * Finding B2: the page reads and writes no origin storage                  *
+ * ---------------------------------------------------------------------- *
+ *
+ * WHY AN INIT SCRIPT AND NOT A KEY COUNT AFTERWARDS. Reading
+ * `Object.keys(localStorage)` at the end proves only that nothing SURVIVED.
+ * It cannot see a key written and removed, and it cannot see a READ at all,
+ * which is half of what finding B2 is about: a tool that reads a key it did
+ * not write is still a tool that goes looking at what a shared machine is
+ * holding. So every accessor on both Storage prototypes is wrapped before a
+ * single line of page script runs, and every call is recorded with its key.
+ *
+ * `addInitScript` runs on the main frame of every navigation, including the
+ * reloads later in this file, so a write that only happens on the second load
+ * is caught as surely as one on the first.
+ *
+ * FOREIGN_KEY is seeded here, from the same script, so it is present before
+ * the page has run. It stands for a key some other tool on this origin owns:
+ * nothing here may read it, alter it, or clear it away. Accesses to it are
+ * recorded like any other, and the seeding write itself is done through the
+ * saved original so it does not show up as the page's own.
+ */
+const FOREIGN_KEY = 'zz.foreign.key'
+const FOREIGN_VALUE = 'seeded-by-check-network, must survive untouched'
+await page.addInitScript(
+  ([foreignKey, foreignValue]) => {
+    const proto = Storage.prototype
+    const originalSetItem = proto.setItem
+    const calls = []
+    window.__storageCalls = calls
+
+    for (const method of ['getItem', 'setItem', 'removeItem', 'clear', 'key']) {
+      const original = proto[method]
+      if (typeof original !== 'function') continue
+      Object.defineProperty(proto, method, {
+        configurable: true,
+        writable: true,
+        value: function (...args) {
+          const area = this === window.sessionStorage ? 'sessionStorage' : 'localStorage'
+          calls.push({ area, method, key: args[0] === undefined ? null : String(args[0]) })
+          return original.apply(this, args)
+        },
+      })
+    }
+
+    // Seeded through the SAVED original, so the seeding is not itself
+    // recorded as a call the page made.
+    originalSetItem.call(window.localStorage, foreignKey, foreignValue)
+  },
+  [FOREIGN_KEY, FOREIGN_VALUE],
+)
+
+/**
+ * Every storage call the page made, minus the seeding this script does itself.
+ * Read after each stage rather than only at the end, so a failure names the
+ * stage that caused it.
+ */
+const storageCalls = async () => await page.evaluate(() => window.__storageCalls ?? [])
+
 const foreign = []
 page.on('request', (request) => {
   const url = request.url()
@@ -576,19 +635,23 @@ if (nf03Failures === 0) {
 }
 
 /* ---------------------------------------------------------------------- *
- * Every key written is a key disclosed                                     *
- * ---------------------------------------------------------------------- */
-const storage = await page.evaluate(() => ({
-  local: Object.keys(window.localStorage),
-  session: Object.keys(window.sessionStorage),
-}))
-const disclosed = await page.locator('code').allInnerTexts()
-for (const key of storage.local) {
-  if (!disclosed.includes(key)) fail(`the page writes ${key} without disclosing it`)
+ * Finding B2, first reading: a load touches no storage                     *
+ * ---------------------------------------------------------------------- *
+ *
+ * Read here rather than only at the end of the file, so that a load-time
+ * access is reported against the load rather than against whatever ran last.
+ * The full-session assertion, after a form has been driven and reloaded, is
+ * further down.
+ */
+const loadCalls = await storageCalls()
+if (loadCalls.length > 0) {
+  fail(
+    `finding B2: loading the page made ${loadCalls.length} storage call(s): ` +
+      loadCalls.map((c) => `${c.area}.${c.method}(${c.key})`).join(', '),
+  )
 }
-if (storage.session.length > 0) {
-  fail(`the page writes sessionStorage: ${storage.session.join(', ')}`)
-}
+const cookiesAtLoad = await page.evaluate(() => document.cookie)
+if (cookiesAtLoad !== '') fail(`finding B2: the page set a cookie on load: ${cookiesAtLoad}`)
 
 /* ---------------------------------------------------------------------- *
  * The input-guidance instruction, acceptance T1 to T12                     *
@@ -739,103 +802,135 @@ for (const id of guidedIds) {
 }
 
 /* ---------------------------------------------------------------------- *
- * T8 to T11, and C4-ST-03: what a restored value looks like               *
+ * FINDING B2: a whole session, and no storage touched                      *
  * ---------------------------------------------------------------------- *
  *
- * SEEDED WITH THE OLDER STORED SHAPE, deliberately. Typing a value now
- * records it as confirmed, so a document this session wrote comes back with
- * nothing to mark, which is T10 working rather than a gap. The state under
- * test here is the one a reader of the currently-deployed build actually
- * has: values in storage, no confirmations recorded against them.
+ * WHAT THIS REPLACED. T8 to T11 used to seed `c4.state.v1`, reload, and
+ * assert that every restored declaration came back marked "from your last
+ * visit", that confirming a panel cleared its marks, and that the
+ * confirmation survived a reload. That whole feature is gone (finding B2),
+ * so the assertion is inverted: the strongest statement a browser can make
+ * here is not that retention is disclosed but that there is nothing to
+ * disclose.
+ *
+ * THE SHAPE OF THE CHECK, which is the point of it:
+ *
+ *   1. Storage is cleared and ONE FOREIGN KEY is seeded, standing for a key
+ *      another tool on this origin owns. (Both done in the init script, above,
+ *      before any page script has run.)
+ *   2. A full session is driven: every declaration entered, the series
+ *      computed, a panel confirmed, the page reloaded, and declarations
+ *      entered again on the fresh load.
+ *   3. Nothing may have called any storage accessor, in either area. Not a
+ *      write, and not a READ: a tool that reads a key it did not write is
+ *      still looking at what a shared machine holds.
+ *   4. The seeded key must still be there, byte for byte, and be the ONLY
+ *      key there. Removal and alteration fail the same way.
+ *   5. Nothing may have gone sideways into cookies or IndexedDB instead.
  */
-const LEGACY_DOCUMENT = {
-  stockKind: 'stated', stockValue: '0.2', stockUnit: 'mg/mL',
-  stockMassBasis: 'antibody-protein', stockSource: 'certificate-of-analysis',
-  vendorBasis: 'per-test-volume-stated', vendorAmountKind: 'volume',
-  vendorAmountValue: '5', vendorAmountUnit: 'uL',
-  vendorTestVolume: '100', vendorTestVolumeUnit: 'uL',
-  vendorConcentrationKind: 'concentration', vendorConcentrationValue: '', vendorConcentrationUnit: 'ug/mL',
-  vendorCellsKind: 'stated', vendorCells: '1', vendorCellsUnit: 'cells-1e6',
-  stainingVolume: '50', stainingVolumeUnit: 'uL',
-  cellNumber: '2', cellNumberUnit: 'cells-1e6',
-  pipettingMinimum: '1', pipettingMinimumEntered: true,
-  topForm: '3', topValue: '8', topVolumeUnit: 'uL', topConcentrationUnit: 'ug/mL',
-  dilutionFactor: '2', points: '12',
-}
-await page.evaluate(
-  ([key, doc]) => localStorage.setItem(key, JSON.stringify(doc)),
-  ['c4.state.v1', LEGACY_DOCUMENT],
-)
-await page.reload({ waitUntil: 'networkidle' })
-await page.waitForTimeout(400)
-
-/* T8. The explanation appears once, and every carried-over value is marked. */
-const notes = await page.locator('.retention-note').count()
-if (notes !== 1) fail(`T8: the retention explanation appears ${notes} times, expected exactly 1`)
-const markedOnLoad = await page.locator('.retained-marker').count()
-if (markedOnLoad === 0) {
-  fail('T8, and C4-ST-03: values were restored from storage with nothing marked as carried over')
-}
-const railMarkedOnLoad = await page.locator('.rail-declarations .retained-marker').count()
-if (railMarkedOnLoad === 0) {
-  fail('T8: the declaration line beside the series marks nothing as carried over')
-}
-
-/* T11. C4-NF-03 still holds with the markers and the explanation line in
- * place. The markers are IN the sticky declaration line, which has no scroll
- * of its own, so this is measured rather than assumed. */
-const stickyWithMarkers = await page.locator('.series-sticky').boundingBox()
-if (stickyWithMarkers === null) {
-  fail('T11: the sticky declaration block is not present with a restored document')
-} else if (stickyWithMarkers.height > 650) {
-  fail(
-    `T11: with retained markers the sticky block is ${Math.round(stickyWithMarkers.height)}px, ` +
-      'taller than the 650px reference viewport',
-  )
-}
-const markedSweep = await sweepWindowPositions()
-if (markedSweep.failures > 0) {
-  fail(
-    `T11: C4-NF-03 is not met with retained markers present, at ${markedSweep.failures} of ` +
-      `${markedSweep.checked} positions (first: ${markedSweep.worstAt})`,
-  )
-}
-const layoutNoteMarkers =
-  `C4-NF-03 with a restored document, every declaration marked as carried over: MET, sticky block ` +
-  `${Math.round(stickyWithMarkers?.height ?? 0)}px at the reference viewport, at all ${markedSweep.checked} ` +
-  'acceptance-25 positions where a row was in view.'
-
-/* T9. Confirming a panel clears its marks, in the panel and in the results
- * declaration line, in one action, and leaves every other panel alone. */
 await page.evaluate(() => window.scrollTo(0, 0))
-const beforeConfirm = await page.locator('.retained-marker').count()
-const confirmButtons = await page.locator('button.confirm-values').count()
-if (confirmButtons === 0) fail('T9: there is no control to confirm a panel of restored values')
-await page.locator('button.confirm-values').first().click()
-await page.waitForTimeout(200)
-const afterConfirm = await page.locator('.retained-marker').count()
-if (!(afterConfirm < beforeConfirm)) {
-  fail(`T9: confirming a panel did not clear any marker (${beforeConfirm} before, ${afterConfirm} after)`)
-}
-if (afterConfirm === 0) {
-  fail('T9: confirming one panel cleared every marker on the page, not only its own panel’s')
-}
 
-/* T10. The confirmation survives a reload: the marks it cleared stay clear,
- * and the ones it did not stay marked. This is the property a per-load
- * recomputation of retention gets wrong, and the reason confirmation is
- * persisted rather than held in memory. */
+/* A full session on a page that has already been driven hard by everything
+ * above. Reloaded first, so the session starts from whatever a reader
+ * actually gets on a fresh visit rather than from this script's leftovers. */
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForTimeout(400)
-const afterReload = await page.locator('.retained-marker').count()
-if (afterReload !== afterConfirm) {
+
+/* Nothing came back. This is the reader-visible half of finding B2: the
+ * declarations entered above were on screen a moment ago and the page opens
+ * without them. Asserted against the fields themselves rather than against a
+ * marker, because there is no longer a marker to assert against. */
+const onFreshLoad = await page.evaluate(() =>
+  ['#stock-value', '#staining-volume', '#cell-number', '#top-value'].map((sel) => [
+    sel,
+    document.querySelector(sel)?.value ?? null,
+  ]),
+)
+for (const [sel, value] of onFreshLoad) {
+  if (value === null) fail(`finding B2: ${sel} is not on the page after a reload`)
+  else if (value !== '') fail(`finding B2: a reload restored ${sel} to "${value}"`)
+}
+if ((await page.locator('.series-table tbody tr').count()) !== 0) {
+  fail('finding B2: a reload brought back a computed series')
+}
+
+/* The fullest form the page has: every declaration answered, not the
+ * reference case's minimum. */
+await enterFourFlagCase('12')
+await page.waitForTimeout(300)
+if ((await page.locator('.series-table tbody tr').count()) === 0) {
+  fail('finding B2: the session driven for the storage check computed no series')
+}
+
+/* The confirm control is the surviving half of the old confirmation
+ * machinery (C4-SR-05: it stands behind values the TOOL suggested, not values
+ * carried over). Exercised, because the path it sits on used to write. */
+if ((await page.locator('button.confirm-values').count()) > 0) {
+  await page.locator('button.confirm-values').first().click()
+  await page.waitForTimeout(150)
+}
+
+/* Reload, then type again on the fresh load: a write on the second visit is
+ * as much a defect as one on the first. */
+await page.reload({ waitUntil: 'networkidle' })
+await page.waitForTimeout(400)
+await page.fill('#staining-volume', '50')
+await page.fill('#cell-number', '2')
+await page.waitForTimeout(300)
+
+/* 3. Not one accessor called, read or write, in either area. */
+const sessionCalls = await storageCalls()
+if (sessionCalls.length > 0) {
+  const shown = sessionCalls.slice(0, 8).map((c) => `${c.area}.${c.method}(${c.key})`).join(', ')
   fail(
-    `T10: confirmation did not survive a reload (${afterConfirm} markers before, ${afterReload} after)`,
+    `finding B2: a full session made ${sessionCalls.length} storage call(s): ${shown}` +
+      (sessionCalls.length > 8 ? ', ...' : ''),
   )
 }
-if (afterReload === 0) {
-  fail('T10: a reload cleared every marker, including ones that were never confirmed')
+if (sessionCalls.some((c) => c.key === FOREIGN_KEY)) {
+  fail(`finding B2: the page touched ${FOREIGN_KEY}, a key belonging to something else`)
 }
+
+/* 4. The seeded key survived, unchanged, and nothing joined it. */
+const after = await page.evaluate(() => ({
+  local: Object.entries(window.localStorage),
+  session: Object.keys(window.sessionStorage),
+}))
+if (after.local.length !== 1 || after.local[0][0] !== FOREIGN_KEY) {
+  fail(
+    `finding B2: localStorage should hold only the seeded ${FOREIGN_KEY}, and holds ` +
+      `[${after.local.map(([k]) => k).join(', ')}]`,
+  )
+} else if (after.local[0][1] !== FOREIGN_VALUE) {
+  fail(`finding B2: the seeded ${FOREIGN_KEY} was altered, to "${after.local[0][1]}"`)
+}
+if (after.session.length > 0) {
+  fail(`finding B2: the page wrote sessionStorage: ${after.session.join(', ')}`)
+}
+
+/* 5. Nothing went sideways instead. */
+const sideways = await page.evaluate(async () => {
+  const cookie = document.cookie
+  let databases = []
+  try {
+    if (typeof indexedDB?.databases === 'function') {
+      databases = (await indexedDB.databases()).map((d) => d.name ?? '(unnamed)')
+    }
+  } catch {
+    // Not available, which is not a failure: nothing to report either way.
+  }
+  return { cookie, databases }
+})
+if (sideways.cookie !== '') fail(`finding B2: the page set a cookie: ${sideways.cookie}`)
+if (sideways.databases.length > 0) {
+  fail(`finding B2: the page opened IndexedDB: ${sideways.databases.join(', ')}`)
+}
+
+const storageNote =
+  `Finding B2: a full session (every declaration entered, a panel confirmed, a reload, and more ` +
+  `typing on the fresh load) made ${sessionCalls.length} localStorage or sessionStorage calls, ` +
+  `read or write. The one seeded foreign key survived unchanged and was the only key present. No ` +
+  `cookie, no IndexedDB.`
 
 /* T12. The required disclosures are still on the page, none of them moved
  * behind a trigger. Re-read after the reload, and asserted against the same
@@ -855,12 +950,6 @@ for (const [what, phrase] of [
     fail(`T12: ${what} is no longer visible on the page`)
   }
 }
-
-// "Clear stored data" means what it says: the key is gone, not rewritten empty.
-await page.getByRole('button', { name: 'Clear stored data' }).click()
-await page.waitForTimeout(150)
-const remaining = await page.evaluate(() => Object.keys(window.localStorage))
-if (remaining.length > 0) fail(`clearing stored data left ${remaining.join(', ')} behind`)
 
 /* ---------------------------------------------------------------------- *
  * Metadata, robots and the licence                                         *
@@ -1000,14 +1089,14 @@ if (failed) process.exit(1)
 console.log(
   `Network check passed against ${isDeployedRun ? 'the deployed address' : 'the build artefact'}, at ${pageUrl}.\n` +
     'The page requested nothing from any origin but its own. Both self-hosted typefaces loaded.\n' +
-    'Every storage key written is disclosed on the page, nothing survives a reload unmarked, and\n' +
-    'clearing stored data removes the key rather than rewriting it empty. The reference case of\n' +
-    'acceptance 1 renders the values URS section 16 states, C4-FL-03 names its points and marks\n' +
+    'The page read and wrote no browser storage at all across a full session, and left a seeded\n' +
+    'foreign key untouched (finding B2). The reference case of acceptance 1 renders the values\n' +
+    'URS section 16 states, C4-FL-03 names its points and marks\n' +
     'their rows, and the failure classes, the constants register and the three convention\n' +
     'statements are all on the page.\n' +
     layoutNote +
     '\n' +
-    layoutNoteMarkers +
+    storageNote +
     '\n' +
     (isDeployedRun
       ? `ACCEPTANCE TEST 17: PASSED, at ${pageUrl}, ${new Date().toISOString()}.\n` +
