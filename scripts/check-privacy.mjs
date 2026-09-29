@@ -22,9 +22,9 @@ import { extname, join } from 'node:path'
 const site = readFileSync('src/lib/site.ts', 'utf8')
 const SITE_URL = (site.match(/SITE_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1]
 const REPO_URL = (site.match(/REPO_URL(?::[^=]+)?=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
-const LIGANT_URL = (site.match(/LIGANT_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
-// The footer's Privacy Policy link, and only that exact URL.
-const PRIVACY_URL = (site.match(/PRIVACY_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
+// The parent site the masthead links and the footer's Privacy Policy are the
+// suite's, from the shared header and footer. Exact values only.
+import { LIGANT_URL, PRIVACY_URL } from '@ligant/bench-chrome'
 
 if (!SITE_URL) {
   console.error('FAIL: SITE_URL could not be read from src/lib/site.ts')

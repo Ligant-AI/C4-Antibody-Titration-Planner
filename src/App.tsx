@@ -1,9 +1,8 @@
+import { LigantMark, SuiteFooter, SuiteHeader } from '@ligant/bench-chrome/react'
+import { FOOTER, HEADER } from './lib/chrome'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Masthead } from './components/shared/Masthead'
-import { SiteFooter } from './components/shared/SiteFooter'
 import { SkipLink } from './components/shared/SkipLink'
 import { FlagList, FlagSummaryList, RejectionList } from './components/shared/FlagList'
-import { LigantMark } from './components/LigantMark'
 import { DeclarationPanel } from './components/DeclarationPanel'
 import { Method } from './components/Method'
 import { SeriesTable, notebookLine, vendorBasisSummary } from './components/SeriesTable'
@@ -375,12 +374,7 @@ export default function App() {
     <FieldHelpProvider>
     <div className="app">
       <SkipLink />
-      <Masthead title={TOOL_NAME}>
-        Plans an antibody titration series for flow cytometry: the concentration at each point, in
-        every form the bench and the method record require, for the staining volume and cell number
-        you declare. Every value is computed deterministically by arithmetic you can read. No model
-        and no inference is applied to any reported number.
-      </Masthead>
+      <SuiteHeader {...HEADER} />
 
       <main id="main">
         <div className="layout">
@@ -1154,7 +1148,7 @@ export default function App() {
         </div>
       </main>
 
-      <SiteFooter />
+      <SuiteFooter {...FOOTER} />
 
       <p className="disclaimer">
         <strong>{SCOPE_STATEMENT}</strong> This tool determines the target concentration at each

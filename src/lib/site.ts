@@ -18,13 +18,6 @@
 
 export const SITE_URL = 'https://benchtools.ligant.ai'
 
-/** The parent site, one level up from the suite. Not `SITE_URL`: that is the
- *  Bench Tools suite's own address, this is Ligant's. */
-export const LIGANT_URL = 'https://ligant.ai/'
-
-/** The footer's Privacy Policy link, the one standard statement across the suite. Exact value
- *  only: the privacy check allows this URL and nothing wider on ligant.ai. */
-export const PRIVACY_URL = 'https://ligant.ai/privacy'
 
 /**
  * The slug, decided 14 September 2026, closing URS open item 12.
@@ -106,36 +99,4 @@ export const CITATION_DOI: string | null = '10.5281/zenodo.22773732'
  */
 export const NETWORK_CLAIM_VERIFIED = true
 
-export interface Tool {
-  id: string
-  /** Label in the tool switcher. */
-  name: string
-  /** Path from the site root, always with a trailing slash. */
-  path: string
-  /** Relative priority in the sitemap. */
-  priority: number
-}
-
-/**
- * The suite, as this tool's navigation presents it.
- *
- * C4 is the first tool in the set with siblings to link, so it is the first to
- * render the `.tool-nav` pills the shared stylesheet has always carried. The
- * sitemap this build emits covers this tool's own page; the sibling entries are
- * here so a reader can reach them, and carry a lower priority to say which page
- * this deployment is.
- */
-export const TOOLS: readonly Tool[] = [
-  { id: 'antibody-titration', name: 'Antibody titration', path: '/antibody-titration-planner/', priority: 1.0 },
-  { id: 'molarity', name: 'Molarity', path: '/molarity-converter/', priority: 0.8 },
-  { id: 'antigen-density', name: 'Antigen density', path: '/antigen-density-calculator/', priority: 0.8 },
-  { id: 'dilution', name: 'Dilution', path: '/dilution-planner/', priority: 0.8 },
-  { id: 'reconstitution', name: 'Reconstitution', path: '/reconstitution/', priority: 0.8 },
-] as const
-
-export type ToolId = (typeof TOOLS)[number]['id']
-
-/** Absolute URL for a path within the site. */
-export function absoluteUrl(path: string): string {
-  return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`
-}
+/* The list of tools is the suite's, in the shared header (@ligant/bench-chrome). */
