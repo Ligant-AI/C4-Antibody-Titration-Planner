@@ -20,12 +20,10 @@
  *       server does not exercise the host, its CDN, or anything a host injects
  *       into a response.
  *
- * The two are held together by NETWORK_CLAIM_VERIFIED in src/lib/site.ts. The
- * footer makes the strong claim only when that flag is set, and this script
- * fails if the flag is set without a written record of a passing deployed run
- * behind it, so the claim cannot go live unrecorded. The record, not this run,
- * is what gates the flag: see the block at NETWORK_RECORD_PATH below for why
- * requiring THIS run to be the deployed one deadlocked and was changed.
+ * The page makes no claim gated on either run any more: the suite's standard
+ * privacy statement discloses Cloudflare Web Analytics, which the host inserts
+ * into the served page, instead of claiming no third-party code runs on it. A
+ * deployed run allows exactly that beacon script and fails on anything else.
  *
  * Requests are RECORDED, NEVER BLOCKED, deliberately. What this proves is that
  * the code never tries to reach another origin at all, which is a stronger
@@ -50,7 +48,6 @@ const constant = (name) => (site.match(new RegExp(`${name}[^=]*=\\s*['"]([^'"]+)
 const SITE_URL = constant('SITE_URL')
 const TOOL_PATH = constant('TOOL_PATH')
 const APP_VERSION = constant('APP_VERSION')
-const NETWORK_CLAIM_VERIFIED = /NETWORK_CLAIM_VERIFIED\s*=\s*true/.test(site)
 
 if (!SITE_URL || !TOOL_PATH) {
   console.error('FAIL: SITE_URL or TOOL_PATH could not be read from src/lib/site.ts')
@@ -169,7 +166,10 @@ const storageCalls = async () => await page.evaluate(() => window.__storageCalls
 const foreign = []
 page.on('request', (request) => {
   const url = request.url()
-  if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:')) {
+  // Cloudflare Web Analytics, which the privacy statement discloses: its script
+  // at exactly this path, and nothing else. Its report goes back to this origin.
+  const disclosedAnalytics = isDeployedRun && url.startsWith('https://static.cloudflareinsights.com/beacon.min.js')
+  if (!url.startsWith(origin) && !url.startsWith('data:') && !url.startsWith('blob:') && !disclosedAnalytics) {
     foreign.push(`${request.method()} ${url}`)
   }
 })
@@ -999,47 +999,9 @@ if ((await page.locator('footer.site-footer a[href$="LICENSE"]').count()) === 0)
 }
 
 /*
- * The claim about the deployed address, and the flag that gates it.
- *
- * Open item 18. The previous version of this check failed whenever the flag
- * was true AND the run was local, on the reasoning that a local run cannot
- * itself establish a deployed-address claim. True, but it deadlocked `npm
- * run verify`: the very next local run, AFTER a genuine deployed pass had
- * set the flag correctly, failed for being local, which blocks the deploy
- * that would ship that correctly-set flag.
- *
- * A local run still cannot ESTABLISH the claim, so it does not get to
- * decide the flag is fine on its own say-so either. What it can check,
- * exactly as well as a deployed run can, is whether a WRITTEN RECORD of a
- * passing deployed run backs the flag, in the same idiom this project's
- * other open items use. Requiring that record, rather than requiring THIS
- * run to be the deployed one, is what removes the deadlock without removing
- * the guarantee: the strong claim still cannot go live on an unrecorded
- * local run, and now cannot go live on an unrecorded deployed run either.
- */
-const NETWORK_RECORD_PATH = 'docs/open-item-17-deployed-network-verification.md'
-if (NETWORK_CLAIM_VERIFIED) {
-  if (!existsSync(NETWORK_RECORD_PATH)) {
-    fail(
-      `NETWORK_CLAIM_VERIFIED is set but ${NETWORK_RECORD_PATH} does not exist. Record the passing ` +
-        'deployed-address run there (this script prints exactly that record when it passes against a ' +
-        'deployed address) before the flag may be set.',
-    )
-  } else {
-    const record = readFileSync(NETWORK_RECORD_PATH, 'utf8')
-    if (!record.includes('ACCEPTANCE TEST 17: PASSED')) {
-      fail(`${NETWORK_RECORD_PATH} exists but does not record an ACCEPTANCE TEST 17: PASSED result`)
-    }
-    if (!record.includes(`${SITE_URL}${TOOL_PATH}`)) {
-      fail(`${NETWORK_RECORD_PATH} does not name the deployed address the pass was recorded against`)
-    }
-  }
-}
-/*
  * The footer carries the suite's standard privacy statement, word for word, and
- * it names the one script from outside this page that runs on it. It no longer
- * carries a claim gated on NETWORK_CLAIM_VERIFIED: the standard statement
- * discloses Cloudflare Web Analytics rather than claiming no third-party code.
+ * it names the one script from outside this page that runs on it, rather than
+ * claiming that none does.
  */
 for (const phrase of [
   'Everything you enter into this tool stays on your computer.',
@@ -1092,7 +1054,8 @@ if (failed) process.exit(1)
 
 console.log(
   `Network check passed against ${isDeployedRun ? 'the deployed address' : 'the build artefact'}, at ${pageUrl}.\n` +
-    'The page requested nothing from any origin but its own. Both self-hosted typefaces loaded.\n' +
+    (isDeployedRun ? 'The page requested nothing from another origin but the disclosed analytics beacon. ' : 'The page requested nothing from any origin but its own. ') +
+    'Both self-hosted typefaces loaded.\n' +
     'The page read and wrote no browser storage at all across a full session, and left a seeded\n' +
     'foreign key untouched (finding B2). The reference case of acceptance 1 renders the values\n' +
     'URS section 16 states, C4-FL-03 names its points and marks\n' +
@@ -1104,10 +1067,8 @@ console.log(
     '\n' +
     (isDeployedRun
       ? `ACCEPTANCE TEST 17: PASSED, at ${pageUrl}, ${new Date().toISOString()}.\n` +
-        `Record this pass in ${NETWORK_RECORD_PATH} (date, address, this PASSED line), THEN set\n` +
-        'NETWORK_CLAIM_VERIFIED in src/lib/site.ts and redeploy. The record has to exist first: the next\n' +
-        'local `npm run verify`, after the flag is set, checks for it rather than for this run having been\n' +
-        'the deployed one, which is what lets that local run pass at all.'
+        'The only request to another origin was the disclosed Cloudflare Web Analytics beacon script.\n' +
+        'Record this pass in docs/open-item-17-deployed-network-verification.md (date, address, this line).'
       : 'ACCEPTANCE TEST 17 IS NOT SATISFIED BY THIS RUN. It asks for the deployed address, which a\n' +
         'local server cannot stand in for. Deploy, then run:\n' +
         `  node scripts/check-network.mjs ${SITE_URL}${TOOL_PATH}`),

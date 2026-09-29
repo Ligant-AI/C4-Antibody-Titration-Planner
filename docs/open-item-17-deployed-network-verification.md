@@ -141,3 +141,20 @@ at the time above. It does not establish that no future deploy, no future
 Cloudflare configuration change, and no future host-side injection will alter
 what is served; C4-NF-01's own statement on the page is careful to say
 "has been verified", not "is guaranteed to remain".
+
+## Superseded, 29 September 2026
+
+The passes above established that the served page requested nothing from any
+other origin, and the page said so ("no third-party code runs on this page,
+confirmed against the page as served"), gated on `NETWORK_CLAIM_VERIFIED`.
+
+That is no longer the claim. The suite now carries one standard privacy
+statement, which discloses Cloudflare Web Analytics: a beacon script the host
+inserts into the served page to count visits and page-load time. The page's
+content security policy allows exactly that script and nothing else, the
+in-page Privacy section and the footer carry the standard statement, and
+`NETWORK_CLAIM_VERIFIED` and the gate that read this record are removed.
+
+A deployed run (`node scripts/check-network.mjs <address>`) now allows exactly
+the beacon script and fails on any other request to another origin. The
+records above stand as what was true when they were made.
