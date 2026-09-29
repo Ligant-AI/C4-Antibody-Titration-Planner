@@ -158,3 +158,26 @@ in-page Privacy section and the footer carry the standard statement, and
 A deployed run (`node scripts/check-network.mjs <address>`) now allows exactly
 the beacon script and fails on any other request to another origin. The
 records above stand as what was true when they were made.
+
+## Google Analytics after Allow, 29 September 2026 (22:39 UTC)
+
+From `@ligant/bench-chrome` 1.1.0 the suite footer asks, in a banner, before
+Google Analytics loads. Deployed commit `b545573`, at
+https://benchtools.ligant.ai/antibody-titration-planner/.
+
+- `node scripts/check-network.mjs <address>` (which sends a Global Privacy
+  Control signal, so the banner neither shows nor touches storage): **pass**.
+  The only request to another origin was the Cloudflare Web Analytics beacon
+  script. Finding B2: 0 storage calls in a full session.
+- bench-chrome `scripts/check-consent.mjs <address>`: **pass**. First load:
+  banner shown, no Google request, no cookie, no storage. A sentinel typed into
+  all 7 fields before and after Allow, searched in plain, URL-encoded, base64
+  and base64url form in every request URL and body: **0 hits**. After Allow the
+  tag loaded and hits were sent (and aborted by the check) to
+  `www.google-analytics.com/g/collect` and `www.google.com/g/collect`; GA
+  cookies `_ga` and `_ga_9V1GYE3KRX` host-only. Withdrawal deleted them and the
+  next load made no Google request. GPC: no banner, no Google.
+
+Analytics endpoints observed: `static.cloudflareinsights.com` (beacon script),
+and only after Allow `www.googletagmanager.com`, `www.google-analytics.com`
+and `www.google.com`.
