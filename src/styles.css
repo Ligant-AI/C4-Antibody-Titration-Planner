@@ -150,6 +150,11 @@ p  { margin: 0; }
 
 .stack { display: flex; flex-direction: column; gap: 16px; }
 
+/* Links in the page's own text, set as the footer sets them: the Privacy
+   Policy under Method, conventions and limits is the one there is. */
+.method-panel a { color: var(--text-primary); text-decoration: underline; text-underline-offset: 2px; }
+.method-panel a:hover { color: var(--brand-teal); }
+
 /* ---------- panels ---------- */
 
 .panel {

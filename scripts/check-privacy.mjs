@@ -1,5 +1,5 @@
 /**
- * The static half of the privacy claim: this tool contacts no third party.
+ * The static half of the privacy claim: this tool's code contacts no other origin.
  *
  * Three rules, checked without running anything:
  *
@@ -101,7 +101,7 @@ if (!existsSync('dist')) {
 if (failures.length > 0) {
   console.error(`Privacy check failed with ${failures.length} issue(s):\n`)
   for (const f of failures) console.error(`  ${f}`)
-  console.error('\nThis project contacts no third party and transmits no user data.')
+  console.error('\nThis project\'s code contacts no other origin and transmits no user data.')
   console.error('See the privacy section of README.md before changing this.')
   process.exit(1)
 }

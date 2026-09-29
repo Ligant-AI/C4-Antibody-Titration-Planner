@@ -5,7 +5,7 @@ point, in every form the bench and the method record require, for the staining
 volume and cell number you actually use.
 
 A free bench tool from [Ligant](https://ligant.ai), part of Ligant Bench Tools.
-It runs entirely in your browser and contacts no third party.
+It runs entirely in your browser, and nothing you enter is transmitted or stored.
 
 **Use it at benchtools.ligant.ai/antibody-titration-planner/**
 
@@ -104,37 +104,24 @@ Same inputs, same outputs. Nothing reads a clock or a random source.
 
 ## Privacy
 
-Everything is computed in your browser. Nothing you enter is transmitted, and
-the page contacts no third party at all: the typefaces are self-hosted, there is
-no analytics script, and the source contains no network call of any kind.
+The page carries the standard privacy statement every Ligant Bench Tool shares:
+
+> Everything you enter into this tool stays on your computer. Calculations run
+> entirely in your browser, and your inputs are never transmitted, stored, or
+> logged. We use Cloudflare Web Analytics to count visits and measure how
+> quickly this page loads, so we can see which tools are used and improve them.
+> It sets no cookie, does not identify you, and never reads what you type.
+
+The full terms are in the [Privacy Policy](https://ligant.ai/privacy). The
+typefaces are self-hosted, and the source contains no network call of any kind.
 
 Two checks enforce this on every build. `check:privacy` fails if any external
 address appears in the source or in the built bundle. `check:network` drives the
 built page in a real browser and fails if it requests anything from another
-origin; requests are recorded rather than blocked, so what it proves is that the
-code never tries.
-
-Both of those are checks on the build. The stronger claim, about the page as
-served, needs a run against the deployed address. That run has been made, and
-its record is `docs/open-item-17-deployed-network-verification.md`, so the
-footer states it.
-
-It is a snapshot rather than a guarantee, and the page says so in those terms.
-It establishes what the deployed address served when it was checked; it cannot
-establish what a future deploy, a Cloudflare configuration change or a
-host-side injection will serve. That is why the check is re-run after every
-deploy, and why the record carries a date and an address rather than a tick.
-
-**Nothing is stored in your browser either.** No cookie, no site data of any
-kind. What you enter lives in the tab for as long as the tab does, and a reload
-starts an empty page rather than returning declarations you made under
-conditions that may since have changed.
-
-The tool used to write one key holding the declarations on screen. Finding B2
-removed it, and `check:network` now instruments every storage accessor before
-any page script runs, drives a full session, and fails the build on a single
-call, a read as readily as a write. `docs/finding-b2-origin-storage.md` is the
-record, including the two inserted defects that confirmed the check can fail.
+origin, or reads or writes browser storage; requests are recorded rather than
+blocked, so what it proves is that the code never tries. The content security
+policy allows this origin and the Cloudflare Web Analytics beacon script, which
+the host inserts into the served page, and nothing else.
 
 ## Running it
 
@@ -164,28 +151,16 @@ Nothing else needs it. `npm run dev`, `npm run build` and `npm test` do not.
 
 ### Verifying a deployment
 
-The runtime privacy check has a second mode that acceptance test 17 actually
-requires, because a local server over `dist/` does not exercise the host or its
-CDN:
+A local server over `dist/` does not exercise the host or its CDN, so the
+runtime check has a second mode, against the page as served:
 
 ```sh
 node scripts/check-network.mjs https://benchtools.ligant.ai/antibody-titration-planner/
 ```
 
-`NETWORK_CLAIM_VERIFIED` in `src/lib/site.ts` is already set, on the strength
-of the two passes recorded in
-`docs/open-item-17-deployed-network-verification.md`. **Re-run this after every
-deploy**: acceptance 17 is a claim about the page as served, so it lapses the
-moment that page changes, which is why the record carries a second run made
-after the input-guidance rework rather than resting on the first.
-
-When it passes, paste the printed record into that file. What gates the flag is
-the record, not the run: a local `npm run verify` checks that a written,
-addressed, passing record backs the flag, rather than demanding that this
-particular run be the deployed one. That distinction exists because the earlier
-rule deadlocked, a local run failing merely for being local blocked the deploy
-that would have shipped the correctly-set flag. A local run still cannot
-establish the claim, and still does not get to wave it through unrecorded.
+It allows exactly the disclosed Cloudflare Web Analytics beacon script and fails
+on any other request to another origin. Re-run it after every deploy, and record
+the pass in `docs/open-item-17-deployed-network-verification.md`.
 
 ## Status and limitations
 
