@@ -105,6 +105,27 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1366, height: 650 } })
 
 /* ---------------------------------------------------------------------- *
+ * The suite's privacy choice is held out of this run, deliberately.        *
+ * ---------------------------------------------------------------------- *
+ *
+ * From @ligant/bench-chrome 1.1.0 the suite footer asks, in a banner, before
+ * Google Analytics loads, and remembers the answer in one localStorage entry
+ * (ligant_privacy_choice). That entry is the visitor's answer to the suite, not
+ * data this tool holds, and it is tested where it is written:
+ * `npm run check:consent` runs bench-chrome's check-consent.mjs against this
+ * build (nothing Google or stored before Allow, and a sentinel typed into every
+ * field never reaching any host).
+ *
+ * So this run sends a Global Privacy Control signal. Under GPC the banner is not
+ * shown and the suite makes no storage call at all, which leaves finding B2
+ * below exactly as strict as before: any storage access is still this tool's own,
+ * and still fails the build. Any Google request is still a foreign request.
+ */
+await page.addInitScript(() => {
+  Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { get: () => true })
+})
+
+/* ---------------------------------------------------------------------- *
  * Finding B2: the page reads and writes no origin storage                  *
  * ---------------------------------------------------------------------- *
  *
