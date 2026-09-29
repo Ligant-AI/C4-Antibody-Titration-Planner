@@ -23,6 +23,8 @@ const site = readFileSync('src/lib/site.ts', 'utf8')
 const SITE_URL = (site.match(/SITE_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1]
 const REPO_URL = (site.match(/REPO_URL(?::[^=]+)?=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
 const LIGANT_URL = (site.match(/LIGANT_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
+// The footer's Privacy Policy link, and only that exact URL.
+const PRIVACY_URL = (site.match(/PRIVACY_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
 
 if (!SITE_URL) {
   console.error('FAIL: SITE_URL could not be read from src/lib/site.ts')
@@ -90,6 +92,7 @@ if (!existsSync('dist')) {
       // Same reasoning: the masthead's link to the parent site, and nothing
       // else on ligant.ai waved through by it.
       if (LIGANT_URL !== null && url === LIGANT_URL) continue
+      if (PRIVACY_URL !== null && url === PRIVACY_URL) continue
       failures.push(`${file} embeds ${url}`)
     }
   }

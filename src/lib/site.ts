@@ -22,6 +22,10 @@ export const SITE_URL = 'https://benchtools.ligant.ai'
  *  Bench Tools suite's own address, this is Ligant's. */
 export const LIGANT_URL = 'https://ligant.ai/'
 
+/** The footer's Privacy Policy link, the one standard statement across the suite. Exact value
+ *  only: the privacy check allows this URL and nothing wider on ligant.ai. */
+export const PRIVACY_URL = 'https://ligant.ai/privacy'
+
 /**
  * The slug, decided 14 September 2026, closing URS open item 12.
  *

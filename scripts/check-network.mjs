@@ -944,7 +944,7 @@ for (const [what, phrase] of [
   ['C4-OUT-10, the staining-volume convention', 'final volume of the stain, including the antibody'],
   ['C4-OUT-11, the dilution convention', 'final volume divided by stock volume'],
   ['C4-OUT-07, precision and rounding', 'rounded half away from zero'],
-  ['the privacy statement', 'Your data stays in your browser'],
+  ['the privacy statement', 'Everything you enter into this tool stays on your computer'],
 ]) {
   if (!disclosuresAfter.includes(phrase)) {
     fail(`T12: ${what} is no longer visible on the page`)
@@ -1036,18 +1036,22 @@ if (NETWORK_CLAIM_VERIFIED) {
   }
 }
 /*
- * A structural check on top of the record check above: the footer's claim is
- * a ternary keyed on NETWORK_CLAIM_VERIFIED (SiteFooter.tsx), which already
- * guarantees the rendered text cannot disagree with the flag. This asserts
- * that guarantee held, rather than trusting it: a future edit could replace
- * the ternary with a hardcoded string and still pass every check above.
+ * The footer carries the suite's standard privacy statement, word for word, and
+ * it names the one script from outside this page that runs on it. It no longer
+ * carries a claim gated on NETWORK_CLAIM_VERIFIED: the standard statement
+ * discloses Cloudflare Web Analytics rather than claiming no third-party code.
  */
-if (NETWORK_CLAIM_VERIFIED) {
-  if (!footer.includes('confirmed against the page as served')) {
-    fail('NETWORK_CLAIM_VERIFIED is set but the footer does not state the deployed-address-confirmed claim')
-  }
-} else if (footer.includes('confirmed against the page as served')) {
-  fail('the footer claims a deployed-address confirmation that has not been recorded')
+for (const phrase of [
+  'Everything you enter into this tool stays on your computer.',
+  'your inputs are never transmitted, stored, or logged.',
+  'We use Cloudflare Web Analytics',
+  'It sets no cookie, does not identify you, and never reads what you type.',
+  'Privacy Policy',
+]) {
+  if (!footer.includes(phrase)) fail(`the footer does not carry the standard privacy statement: ${phrase}`)
+}
+if (footer.includes('confirmed against the page as served')) {
+  fail('the footer still carries the retired deployed-address claim')
 }
 
 /* ---------------------------------------------------------------------- *

@@ -9,33 +9,20 @@
  * contacts anything: a mailto is handled by the reader's own mail client and
  * fires no request, so the privacy claim is untouched.
  *
- * THE PRIVACY PARAGRAPHS ARE PLAIN LANGUAGE, DELIBERATELY, for a reader who is
- * not going to read the technical privacy section elsewhere on the page.
- * "We do count visits" is server-side hosting-provider traffic logging, a fact
- * about the infrastructure rather than something this page's own code does; it
- * does not conflict with "no third-party code of any kind", which is a claim
- * about what runs on the page itself.
- *
- * THE ONE CLAUSE STILL GATED is "no third-party code ... runs on this page",
- * and only that clause: C4-NF-01 is an environment claim about the SERVED page
- * and acceptance 17 is the only thing that can establish it, since a local
- * server over dist/ does not exercise the host or its CDN. So the unqualified
- * form is shown only once NETWORK_CLAIM_VERIFIED has been set, which is a
- * deployment step; until then the page says what is actually established,
- * which is narrower. An accurate narrower claim is worth more than an
- * unverified broader one.
+ * THE PRIVACY STATEMENT IS THE SUITE'S STANDARD ONE, word for word the same in
+ * every Bench Tool, including its disclosure of Cloudflare Web Analytics. It is
+ * not rewritten per tool: a reader moving between tools should read one policy.
  */
 import { useState } from 'react'
 import {
   APP_VERSION,
   CITATION_DOI,
   DEPLOYED_URL,
-  NETWORK_CLAIM_VERIFIED,
+  PRIVACY_URL,
   RELEASE_YEAR,
   REPO_URL,
   TOOL_NAME,
 } from '../../lib/site'
-import { SCOPE_STATEMENT } from '../../lib/flags'
 
 /**
  * The citation, in three pieces, so what is shown and what is copied cannot
@@ -87,42 +74,25 @@ export function SiteFooter() {
       <div className="footer-grid">
         <div className="footer-prose">
           <p>
-            Your data stays in your browser. Everything you enter into this tool is calculated on
-            your own device and never sent anywhere. We do not see it, store it, or have any way to
-            retrieve it. Closing the page ends it.
+            Ligant Bench Tools are free and open source under Apache 2.0, for research and educational use.{' '}
+            <strong>Privacy.</strong> Everything you enter into this tool stays on your computer. Calculations run entirely in your browser, and your inputs are never transmitted, stored, or logged. We use Cloudflare Web Analytics to count visits and measure how quickly this page loads, so we can see which tools are used and improve them. It sets no cookie, does not identify you, and never reads what you type.{' '}
+            <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+              Privacy Policy
+              <span className="visually-hidden"> (opens in a new tab)</span>
+            </a>
           </p>
+          {REPO_URL && (
+            <p>
+              Every figure on this page comes from code you can read, download or run yourself, at{' '}
+              <a href={REPO_URL}>{REPO_URL.replace('https://', '')}</a>. Clone it and{' '}
+              <code>npm run dev</code> for a local copy.
+            </p>
+          )}
           <p>
-            There is no account and no tracking of you. No login, no sign up, no cookies for
-            advertising, no analytics scripts, and no third-party code of any kind{' '}
-            {NETWORK_CLAIM_VERIFIED ? (
-              <>runs on this page, confirmed against the page as served, not only against the code.</>
-            ) : (
-              <>
-                is in the code we publish, confirmed by scanning it and running it in a real browser.
-                The page as served has not yet been checked the same way.
-              </>
-            )}
-          </p>
-          <p>
-            We do count visits. Our hosting provider records basic traffic: which pages get opened,
-            how often, and roughly where in the world from. Because we collect nothing about who you
-            are, this is the only signal we have about whether these tools are useful and which one
-            to build next.
-          </p>
-          <p>
-            Ligant Bench Tools are free and open source under Apache 2.0.
-            {REPO_URL && (
-              <>
-                {' '}
-                Every figure on this page comes from code you can read, download or run yourself, at{' '}
-                <a href={REPO_URL}>{REPO_URL.replace('https://', '')}</a>.
-              </>
-            )}{' '}
-            <strong>{SCOPE_STATEMENT}</strong>
-          </p>
-          <p>
-            These tools are standalone calculators. If your lab needs more than they cover, please
-            email us <a href="mailto:hello@ligant.ai">hello@ligant.ai</a>.
+            These tools are standalone calculators. Ligant's enterprise platform adds reference
+            databases, connected agentic workflows, on-premise language models, and full GxP
+            validation. If your lab needs that, please email us{' '}
+            <a href="mailto:hello@ligant.ai">hello@ligant.ai</a>.
           </p>
         </div>
 
