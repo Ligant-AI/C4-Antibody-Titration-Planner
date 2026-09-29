@@ -57,7 +57,7 @@ export const APP_VERSION = 'v0.1.0'
 export const RELEASE_YEAR = 2026
 
 export const REPO_URL: string | null =
-  'https://github.com/abmodi-ai/Ligant.ai-Antibody-Titration-Planner'
+  'https://github.com/Ligant-AI/C4-Antibody-Titration-Planner'
 
 /**
  * The Zenodo DOI for THIS version, minted when the v0.1.0 tag was archived,
@@ -125,6 +125,8 @@ export const TOOLS: readonly Tool[] = [
   { id: 'antibody-titration', name: 'Antibody titration', path: '/antibody-titration-planner/', priority: 1.0 },
   { id: 'molarity', name: 'Molarity', path: '/molarity-converter/', priority: 0.8 },
   { id: 'antigen-density', name: 'Antigen density', path: '/antigen-density-calculator/', priority: 0.8 },
+  { id: 'dilution', name: 'Dilution', path: '/dilution-planner/', priority: 0.8 },
+  { id: 'reconstitution', name: 'Reconstitution', path: '/reconstitution/', priority: 0.8 },
 ] as const
 
 export type ToolId = (typeof TOOLS)[number]['id']
