@@ -504,7 +504,7 @@ details.options > div { padding-top: 12px; display: flex; flex-direction: column
 /* ---------- tool navigation ---------- */
 
 .tool-nav { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex-shrink: 0; }
-.tool-nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; }
+.tool-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .tool-nav li { display: flex; }
 .tool-nav a, .tool-nav [aria-current] {
   display: block;
