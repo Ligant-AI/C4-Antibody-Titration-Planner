@@ -9,7 +9,9 @@
  * THIS TOOL STORES NOTHING IN THE BROWSER (finding B2), which is what lets it
  * carry the statement's "never stored": scripts/check-network.mjs drives a
  * whole session with every storage accessor instrumented and fails the build
- * if the page reads or writes any of them.
+ * if the page reads or writes any of them. The one exception is the suite
+ * footer's privacy choice (bench-chrome 1.1.0), the visitor's answer to the
+ * banner, which check:network holds out with GPC and check:consent tests.
  */
 import { PRIVACY_STATEMENT, PRIVACY_URL } from '@ligant/bench-chrome'
 

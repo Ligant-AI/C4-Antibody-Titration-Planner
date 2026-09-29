@@ -24,7 +24,7 @@ const SITE_URL = (site.match(/SITE_URL\s*=\s*['"]([^'"]+)['"]/) ?? [])[1]
 const REPO_URL = (site.match(/REPO_URL(?::[^=]+)?=\s*['"]([^'"]+)['"]/) ?? [])[1] ?? null
 // The parent site the masthead links and the footer's Privacy Policy are the
 // suite's, from the shared header and footer. Exact values only.
-import { LIGANT_URL, PRIVACY_URL } from '@ligant/bench-chrome'
+import { LIGANT_URL, PRIVACY_URL, PRIVACY_CHOICES_URL, GA_SCRIPT_URL } from '@ligant/bench-chrome'
 
 if (!SITE_URL) {
   console.error('FAIL: SITE_URL could not be read from src/lib/site.ts')
@@ -93,6 +93,10 @@ if (!existsSync('dist')) {
       // else on ligant.ai waved through by it.
       if (LIGANT_URL !== null && url === LIGANT_URL) continue
       if (PRIVACY_URL !== null && url === PRIVACY_URL) continue
+      // The suite footer's privacy choice (bench-chrome 1.1.0): its policy link,
+      // and the one script it loads, only after Allow. Exact values only.
+      if (url === PRIVACY_CHOICES_URL) continue
+      if (url === GA_SCRIPT_URL) continue
       failures.push(`${file} embeds ${url}`)
     }
   }

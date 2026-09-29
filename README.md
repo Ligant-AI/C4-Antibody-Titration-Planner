@@ -110,18 +110,28 @@ The page carries the standard privacy statement every Ligant Bench Tool shares:
 > entirely in your browser, and your inputs are never transmitted, stored, or
 > logged. We use Cloudflare Web Analytics to count visits and measure how
 > quickly this page loads, so we can see which tools are used and improve them.
-> It sets no cookie, does not identify you, and never reads what you type.
+> It sets no cookie, does not identify you, and never reads what you type. If
+> you allow it in the banner, we also use Google Analytics, which sets cookies
+> and records which pages you visit; it never receives anything you type into
+> this tool.
 
 The full terms are in the [Privacy Policy](https://ligant.ai/privacy). The
-typefaces are self-hosted, and the source contains no network call of any kind.
+typefaces are self-hosted, and the tool's own source contains no network call of
+any kind. The suite footer (`@ligant/bench-chrome`) shows the privacy banner and,
+only after Allow, loads Google Analytics; it stores only your answer, in one
+`localStorage` entry, `ligant_privacy_choice`.
 
 Two checks enforce this on every build. `check:privacy` fails if any external
 address appears in the source or in the built bundle. `check:network` drives the
 built page in a real browser and fails if it requests anything from another
 origin, or reads or writes browser storage; requests are recorded rather than
 blocked, so what it proves is that the code never tries. The content security
-policy allows this origin and the Cloudflare Web Analytics beacon script, which
-the host inserts into the served page, and nothing else.
+policy allows this origin, the Cloudflare Web Analytics beacon script, which the
+host inserts into the served page, and the Google Analytics hosts the banner
+loads after Allow, and nothing else. `check:consent` drives the banner in a real
+browser: nothing Google or stored before Allow, and a sentinel typed into every
+field never reaches any host. `check:network` runs with a Global Privacy Control
+signal, so the banner stays out of its storage accounting.
 
 ## Running it
 
@@ -159,7 +169,9 @@ node scripts/check-network.mjs https://benchtools.ligant.ai/antibody-titration-p
 ```
 
 It allows exactly the disclosed Cloudflare Web Analytics beacon script and fails
-on any other request to another origin. Re-run it after every deploy, and record
+on any other request to another origin. (It sends GPC, so Google Analytics never
+loads in it; the banner's own deployed check is bench-chrome's
+`check-consent.mjs --live`.) Re-run it after every deploy, and record
 the pass in `docs/open-item-17-deployed-network-verification.md`.
 
 ## Status and limitations
