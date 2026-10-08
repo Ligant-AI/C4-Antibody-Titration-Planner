@@ -3,6 +3,15 @@ import { computeSeries, isRejected, type SeriesResult } from './compute'
 import { REPORTABLE_PAIRS, UNDETECTABLE_FAILURES, CONSTANTS_REGISTER, reportablePair } from './flags'
 import type { ImportedMolecularWeight, SeriesInputs } from './normalise'
 import type { ImportedMassBasis, StockMassBasis } from './units'
+import auditTrail from '../../docs/register-audit-trail.md?raw'
+
+/** One row's section of the register audit trail kept in the repository. */
+function section(id: string): string {
+  const start = auditTrail.indexOf(`(\`${id}\`)`)
+  expect(start).toBeGreaterThan(-1)
+  const end = auditTrail.indexOf('\n## ', start)
+  return auditTrail.slice(start, end === -1 ? undefined : end)
+}
 
 /**
  * Section 8, and acceptances 11, 12 and 14.
@@ -593,14 +602,18 @@ describe('the disclosure lists the page renders', () => {
     // which contains deliberate half-to-even code that explicitly rejects
     // toPrecision for the same reason C4 does. That is a stronger claim than
     // either "measured" or "assumed", and open item 13(iii) resolves to a
-    // behaviour-change branch as a consequence, stated here rather than left
-    // for a reader to work out.
+    // behaviour-change branch as a consequence.
+    //
+    // The page states the conclusion; the evidence trail behind it is kept in
+    // docs/register-audit-trail.md, and pinned there so it cannot be lost.
     const rounding = CONSTANTS_REGISTER.find((e) => e.id === 'rounding-mode')
-    expect(rounding?.status).toMatch(/VERIFIED BY READING C1.s OWN SOURCE/)
-    expect(rounding?.status).toMatch(/roundHalfEven/)
-    expect(rounding?.status).toMatch(/format\.ts lines 75-97/)
-    expect(rounding?.status).toMatch(/REJECTS `toPrecision`/)
-    expect(rounding?.status).toMatch(/BEHAVIOUR-CHANGE branch/)
+    expect(rounding?.status).toMatch(/NOT YET ADOPTED IN C1, which rounds half to even, as its own source and its own output both show/)
+    const trail = section('rounding-mode')
+    expect(trail).toMatch(/VERIFIED BY READING C1.s OWN SOURCE/)
+    expect(trail).toMatch(/roundHalfEven/)
+    expect(trail).toMatch(/format\.ts lines 75-97/)
+    expect(trail).toMatch(/REJECTS `toPrecision`/)
+    expect(trail).toMatch(/BEHAVIOUR-CHANGE branch/)
   })
 
   it('does not claim ADC conformance at a precision the ADC does not use, and says what was actually run', () => {
@@ -611,13 +624,17 @@ describe('the disclosure lists the page renders', () => {
     // register cannot say measured for something that was reasoned, and
     // cannot say conforms at a precision the compared tool never renders at.
     const rounding = CONSTANTS_REGISTER.find((e) => e.id === 'rounding-mode')
-    expect(rounding?.status).not.toMatch(/MEASURED, NOT ASSUMED, and CONFORMS/)
-    expect(rounding?.status).toMatch(/REWORDED, NOT MEASURED AS CONFORMING/)
+    expect(rounding?.status).not.toMatch(/CONFORMS/)
     expect(rounding?.status).toMatch(/resolves away from zero/)
     expect(rounding?.status).toMatch(/not 3 significant figures/)
+    expect(rounding?.status).toMatch(/agree on which way a tie resolves and not on the precision/)
+    // What was run, and the correction itself, are in the repository record.
+    const trail = section('rounding-mode')
+    expect(trail).not.toMatch(/MEASURED, NOT ASSUMED, and CONFORMS/)
+    expect(trail).toMatch(/REWORDED, NOT MEASURED AS CONFORMING/)
     // C1's own live tie test, item 3c: run, not only read.
-    expect(rounding?.status).toMatch(/CONFIRMED BY RUNNING IT/)
-    expect(rounding?.status).toMatch(/0\.101562 rather than 0\.101563/)
+    expect(trail).toMatch(/CONFIRMED BY RUNNING IT/)
+    expect(trail).toMatch(/0\.101562 rather than 0\.101563/)
   })
 
   it('declares the reference viewport closed at v0.5, with its basis configuration line', () => {
@@ -642,7 +659,28 @@ describe('the disclosure lists the page renders', () => {
     expect(nf03?.value).toMatch(/four-flag fixture/)
     expect(nf03?.status).toMatch(/four-flag/)
     expect(nf03?.status).toMatch(/series-sticky/)
+    expect(nf03?.status).toMatch(/SCOPE: this holds for that four-flag declaration set/)
     expect(CONSTANTS_REGISTER.some((e) => e.id === 'viewport-supported')).toBe(false)
+    // The two withdrawn MEASURED claims, and the figure withdrawn with the
+    // origin storage, are kept in the repository record rather than on the page.
+    const trail = section('nf-03-conformance')
+    expect(trail).toMatch(/twice withdrawn/)
+    expect(trail).toMatch(/669px at a 947px viewport/)
+    expect(trail).toMatch(/208px against 187px unmarked/)
+  })
+
+  it('keeps reviewer names and internal finding labels off the page', () => {
+    // The register on the page carries value, basis and status. Who reviewed
+    // what, and which internal finding changed it, is the repository's
+    // record (docs/register-audit-trail.md), not the user's.
+    for (const entry of CONSTANTS_REGISTER) {
+      const text = `${entry.label} ${entry.value} ${entry.status}`
+      expect(text).not.toMatch(/nadira|adacs|finding [a-z]\d|\breview(ed)?\b/i)
+    }
+    // The round-trip row is still OPEN, without naming who closes it.
+    const roundTrip = CONSTANTS_REGISTER.find((e) => e.id === 'round-trip-tolerance')
+    expect(roundTrip?.status).toMatch(/^OPEN, URS open item 6: the derivation record has not yet been signed off\./)
+    expect(section('round-trip-tolerance')).toMatch(/pending NADIRA.s review of the derivation record/)
   })
 
   it('records that the pipetting default is on the behaviour path when unchanged', () => {

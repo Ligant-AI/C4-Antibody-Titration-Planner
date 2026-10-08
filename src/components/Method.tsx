@@ -160,9 +160,8 @@ export function Method({ result, importAttempted }: Props) {
 
         <h3>Specification</h3>
         <p className="hint">
-          Built against C4 URS v{URS_VERSION}. References are given as text rather than as links:
-          every byte of this page is served from this origin, and a link that navigated to a
-          publisher would disclose a visit that the rest of the tool is built to prevent.
+          Built against C4 URS v{URS_VERSION}. References are given as text rather than links, so
+          the page itself sends no visit to a publisher.
         </p>
       </div>
     </section>

@@ -89,7 +89,7 @@ you can see its output it has already rounded.
 
 Same inputs, same outputs. Nothing reads a clock or a random source.
 
-- 271 tests, including the reference case of the specification asserted value by
+- 272 tests, including the reference case of the specification asserted value by
   value, the negative control asserted to raise no flags at all, and every
   rejection and flag condition.
 - An **independent Python reimplementation** in `reimpl/`, written from the
