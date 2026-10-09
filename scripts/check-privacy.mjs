@@ -25,6 +25,8 @@ const REPO_URL = (site.match(/REPO_URL(?::[^=]+)?=\s*['"]([^'"]+)['"]/) ?? [])[1
 // The parent site the masthead links and the footer's Privacy Policy are the
 // suite's, from the shared header and footer. Exact values only.
 import { LIGANT_URL, PRIVACY_URL, PRIVACY_CHOICES_URL, GA_SCRIPT_URL } from '@ligant/bench-chrome'
+const NEWSLETTER_ELSEWHERE_URL = 'https://ligant.ai/#newsletter'
+const NEWSLETTER_POLICY_URL = 'https://ligant.ai/privacy#newsletter'
 
 if (!SITE_URL) {
   console.error('FAIL: SITE_URL could not be read from src/lib/site.ts')
@@ -97,6 +99,12 @@ if (!existsSync('dist')) {
       // and the one script it loads, only after Allow. Exact values only.
       if (url === PRIVACY_CHOICES_URL) continue
       if (url === GA_SCRIPT_URL) continue
+      // The suite footer's newsletter signup (bench-chrome 1.3.0): the link to
+      // the signup on ligant.ai shown off benchtools.ligant.ai, and its policy
+      // section. Exact values only. The endpoint itself is the relative
+      // /api/subscribe, which this scan does not match.
+      if (url === NEWSLETTER_ELSEWHERE_URL) continue
+      if (url === NEWSLETTER_POLICY_URL) continue
       failures.push(`${file} embeds ${url}`)
     }
   }

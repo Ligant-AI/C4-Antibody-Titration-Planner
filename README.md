@@ -5,7 +5,8 @@ point, in every form the bench and the method record require, for the staining
 volume and cell number you actually use.
 
 A free bench tool from [Ligant](https://ligant.ai), part of Ligant Bench Tools.
-It runs entirely in your browser, and nothing you enter is transmitted or stored.
+It runs entirely in your browser, and nothing you enter into the planner is
+transmitted or stored.
 
 **Use it at benchtools.ligant.ai/antibody-titration-planner/**
 
@@ -106,14 +107,15 @@ Same inputs, same outputs. Nothing reads a clock or a random source.
 
 The page carries the standard privacy statement every Ligant Bench Tool shares:
 
-> Everything you enter into this tool stays on your computer. Calculations run
-> entirely in your browser, and your inputs are never transmitted, stored, or
-> logged. We use Cloudflare Web Analytics to count visits and measure how
-> quickly this page loads, so we can see which tools are used and improve them.
-> It sets no cookie, does not identify you, and never reads what you type. If
-> you allow it in the banner, we also use Google Analytics, which sets cookies
-> and records which pages you visit; it never receives anything you type into
-> this tool.
+> Everything you enter into this calculator stays on your computer.
+> Calculations run entirely in your browser, and your inputs are never
+> transmitted, stored, or logged. The newsletter signup at the foot of this page is separate: only
+> an email address you choose to submit there is sent to us. We use Cloudflare
+> Web Analytics to count visits and measure how quickly this page loads, so we
+> can see which tools are used and improve them. It sets no cookie, does not
+> identify you, and never reads what you type. If you allow it in the banner, we
+> also use Google Analytics, which sets cookies and records which pages you
+> visit; it never receives anything you type into this tool.
 
 The full terms are in the [Privacy Policy](https://ligant.ai/privacy). The
 typefaces are self-hosted, and the tool's own source contains no network call of
@@ -121,16 +123,30 @@ any kind. The suite footer (`@ligant/bench-chrome`) shows the privacy banner and
 only after Allow, loads Google Analytics; it stores only your answer, in one
 `localStorage` entry, `ligant_privacy_choice`.
 
+The footer also opens with a newsletter signup, which is separate from the
+planner. On the hosted page it asks for an email address and a consent tick.
+Nothing is sent until you submit it; then the email address and the consent,
+and nothing you entered into the planner, go in one request to the site's own
+`/api/subscribe`, which forwards them to ligant.ai to email you a confirmation
+link. Nothing joins the list until you confirm. A copy you run yourself shows a
+link to the signup on ligant.ai instead of the form. See the
+[Privacy Policy](https://ligant.ai/privacy#newsletter).
+
 Two checks enforce this on every build. `check:privacy` fails if any external
 address appears in the source or in the built bundle. `check:network` drives the
 built page in a real browser and fails if it requests anything from another
 origin, or reads or writes browser storage; requests are recorded rather than
 blocked, so what it proves is that the code never tries. The content security
 policy allows this origin, the Cloudflare Web Analytics beacon script, which the
-host inserts into the served page, and the Google Analytics hosts the banner
-loads after Allow, and nothing else. `check:consent` drives the banner in a real
-browser: nothing Google or stored before Allow, and a sentinel typed into every
-field never reaches any host. `check:network` runs with a Global Privacy Control
+host inserts into the served page, the newsletter endpoint `/api/subscribe`, and
+the Google Analytics hosts the banner loads after Allow, and nothing else.
+`check:network` also fails if the newsletter form is missing or if anything is
+sent to `/api/subscribe` while the page is loaded and used. `check:consent`
+drives the banner in a real browser: nothing Google or stored before Allow, and
+a sentinel typed into every field of the planner never reaches any host. It then
+checks the newsletter signup on its own: nothing sent before submit, and one
+request carrying only the email address, the consent and an empty spam-trap
+field. `check:network` runs with a Global Privacy Control
 signal, so the banner stays out of its storage accounting.
 
 ## Running it

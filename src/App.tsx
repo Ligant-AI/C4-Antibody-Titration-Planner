@@ -1156,7 +1156,7 @@ export default function App() {
         pipetted, does not analyse the resulting data, does not choose the optimal point, and cannot
         determine whether any point saturates the target. A vendor recommendation is a concentration
         chosen for a stated assay and does not establish saturation. All computation is performed
-        locally in this browser. Nothing you enter is transmitted.
+        locally in this browser. Nothing you enter into the planner is transmitted.
       </p>
 
       <div className="colophon">

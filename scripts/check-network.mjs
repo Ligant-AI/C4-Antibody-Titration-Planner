@@ -185,8 +185,22 @@ await page.addInitScript(
 const storageCalls = async () => await page.evaluate(() => window.__storageCalls ?? [])
 
 const foreign = []
+/*
+ * The suite footer's newsletter signup (bench-chrome 1.3.0) posts to
+ * /api/subscribe, same-origin, and only when a reader submits it. This run never
+ * submits it, so ANY request to that path, from any origin, means something sent
+ * it without being asked: on load, or while the planner was being used. Recorded
+ * separately because the same-origin rule below would wave it through. The
+ * signup's own behaviour on submit is tested by check:consent.
+ */
+const subscribeRequests = []
 page.on('request', (request) => {
   const url = request.url()
+  try {
+    if (new URL(url).pathname.endsWith('/api/subscribe')) subscribeRequests.push(`${request.method()} ${url}`)
+  } catch {
+    // Not a URL with a path (data:, blob:): not a request to the endpoint.
+  }
   // Cloudflare Web Analytics, which the privacy statement discloses: its script
   // at exactly this path, and nothing else. Its report goes back to this origin.
   const disclosedAnalytics = isDeployedRun && url.startsWith('https://static.cloudflareinsights.com/beacon.min.js')
@@ -204,6 +218,12 @@ if ((await page.locator('main#main').count()) === 0) fail('there is no main land
 if ((await page.locator('a.skip-link').count()) === 0) fail('there is no skip link')
 if ((await page.locator('.masthead').count()) === 0) fail('there is no masthead')
 if ((await page.locator('footer.site-footer').count()) === 0) fail('there is no site footer')
+// The newsletter signup form is rendered into the footer on every origin; only
+// on benchtools.ligant.ai is it shown, so existence is asserted, not visibility.
+if ((await page.locator('footer.site-footer form[data-newsletter]').count()) !== 1) {
+  fail('the footer does not carry the newsletter signup form')
+}
+if (subscribeRequests.length > 0) fail(`loading the page sent ${subscribeRequests.length} request(s) to /api/subscribe`)
 if ((await page.title()) === '') fail('the document has no title')
 
 const navCurrent = await page.locator('.tool-nav [aria-current="page"]').first().textContent().catch(() => null)
@@ -965,7 +985,7 @@ for (const [what, phrase] of [
   ['C4-OUT-10, the staining-volume convention', 'final volume of the stain, including the antibody'],
   ['C4-OUT-11, the dilution convention', 'final volume divided by stock volume'],
   ['C4-OUT-07, precision and rounding', 'rounded half away from zero'],
-  ['the privacy statement', 'Everything you enter into this tool stays on your computer'],
+  ['the privacy statement', 'Everything you enter into this calculator stays on your computer'],
 ]) {
   if (!disclosuresAfter.includes(phrase)) {
     fail(`T12: ${what} is no longer visible on the page`)
@@ -1025,8 +1045,9 @@ if ((await page.locator('footer.site-footer a[href$="LICENSE"]').count()) === 0)
  * claiming that none does.
  */
 for (const phrase of [
-  'Everything you enter into this tool stays on your computer.',
+  'Everything you enter into this calculator stays on your computer.',
   'your inputs are never transmitted, stored, or logged.',
+  'The newsletter signup at the foot of this page is separate: only an email address you choose to submit there is sent to us.',
   'We use Cloudflare Web Analytics',
   'It sets no cookie, does not identify you, and never reads what you type.',
   'Privacy Policy',
@@ -1055,6 +1076,11 @@ if (server !== null) server.close()
 
 let failed = false
 
+if (subscribeRequests.length > 0) {
+  console.error(`FAIL: the page sent ${subscribeRequests.length} request(s) to /api/subscribe without a submit:`)
+  for (const request of subscribeRequests) console.error(`  ${request}`)
+  failed = true
+}
 if (foreign.length > 0) {
   console.error(`FAIL: the page contacted ${foreign.length} external origin(s):`)
   for (const request of foreign) console.error(`  ${request}`)
@@ -1077,6 +1103,8 @@ console.log(
   `Network check passed against ${isDeployedRun ? 'the deployed address' : 'the build artefact'}, at ${pageUrl}.\n` +
     (isDeployedRun ? 'The page requested nothing from another origin but the disclosed analytics beacon. ' : 'The page requested nothing from any origin but its own. ') +
     'Both self-hosted typefaces loaded.\n' +
+    'The newsletter signup form is in the footer, and nothing was sent to /api/subscribe on load or\n' +
+    'while the planner was used.\n' +
     'The page read and wrote no browser storage at all across a full session, and left a seeded\n' +
     'foreign key untouched (finding B2). The reference case of acceptance 1 renders the values\n' +
     'URS section 16 states, C4-FL-03 names its points and marks\n' +
