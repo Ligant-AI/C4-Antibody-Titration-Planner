@@ -1047,7 +1047,7 @@ if ((await page.locator('footer.site-footer a[href$="LICENSE"]').count()) === 0)
 for (const phrase of [
   'Everything you enter into this calculator stays on your computer.',
   'your inputs are never transmitted, stored, or logged.',
-  'The newsletter signup above is separate: only an email address you choose to submit there is sent to us.',
+  'The newsletter signup at the foot of this page is separate: only an email address you choose to submit there is sent to us.',
   'We use Cloudflare Web Analytics',
   'It sets no cookie, does not identify you, and never reads what you type.',
   'Privacy Policy',
