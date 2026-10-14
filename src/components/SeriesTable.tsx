@@ -1,4 +1,5 @@
 import type { SeriesResult } from '../lib/compute';
+import { flagLabel } from '../lib/flags';
 import { formatSigFigs } from '../lib/format';
 import type { FormValue } from '../lib/forms';
 import { FORMS, FORM_LABEL, STOCK_MASS_BASIS_SHORT, STOCK_SOURCE_LABEL, UNIT_LABEL, VENDOR_BASIS_SHORT, type FormId, } from '../lib/units';
@@ -141,11 +142,11 @@ export function notebookLine(result: SeriesResult): string {
     const pipettingMinimum = ` Pipetting minimum ${formatSigFigs(result.normalised.pipettingMinimumUl)} ${UNIT_LABEL.uL} ` +
         `(${result.inputs.pipettingMinimum.provenance}).`;
     const flags = result.flags.length > 0
-        ? ` Flags: ${result.flags.map((f) => `${f.code} (${f.summary})`).join('; ')}.`
+        ? ` Flags: ${result.flags.map((f) => `${flagLabel(f.code)} (${f.summary})`).join('; ')}.`
         : '';
     return (`Titration series, ${result.inputs.points} points, ${formatSigFigs(result.inputs.dilutionFactor)}-fold. ` +
         `Staining volume ${formatSigFigs(result.normalised.stainingVolumeUl)} ${UNIT_LABEL.uL} (final, including antibody), ` +
         `${formatSigFigs(result.normalised.cells)} cells. ${stock}${vendor}${pipettingMinimum} ` +
         `Points ${points}.${flags} ` +
-        `Ligant Antibody Titration Planner ${result.engineVersion}. 3 sf, half away from zero.`);
+        `Ligant Bench Tools: Antibody Titration Planner, engine ${result.engineVersion}. 3 sf, half away from zero.`);
 }

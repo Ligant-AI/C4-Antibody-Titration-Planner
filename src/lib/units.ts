@@ -63,7 +63,7 @@ export function formatCellCount(value: string | number, unit: CellUnit): string 
 export type ImportedMassBasis = 'assembled' | 'monomer' | 'conjugate' | 'not-recorded';
 export const IMPORTED_MASS_BASIS_LABEL: Readonly<Record<ImportedMassBasis, string>> = {
     assembled: 'the assembled molecule as it exists in solution',
-    monomer: 'a monomer or single chain',
+    monomer: 'a subunit of a larger molecule',
     conjugate: 'a conjugate, including its label or payload',
     'not-recorded': 'not recorded',
 };

@@ -1,4 +1,4 @@
-import type { Flag } from '../../lib/flags';
+import { flagLabel, type Flag } from '../../lib/flags';
 function FlagIcon() {
     return (<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M8 1.5 15 14H1L8 1.5Z" fill="var(--brand-amber)"/>
@@ -15,7 +15,7 @@ export function FlagSummaryList({ flags }: {
       {flags.map((flag) => (<li key={flag.code}>
           <details className="flag-summary">
             <summary>
-              <strong>{flag.code}</strong>: {flag.summary}
+              <strong>{flagLabel(flag.code)}</strong>: {flag.summary}
             </summary>
             <span>
               {flag.message}
@@ -35,7 +35,7 @@ export function FlagList({ flags }: {
           <FlagIcon />
           <span>
             
-            <strong>{flag.code}</strong>{' '}
+            <strong>{flagLabel(flag.code)}</strong>{' '}
             {flag.message}
             {flag.remedy && <span className="flag-remedy">{flag.remedy}</span>}
           </span>
@@ -54,7 +54,6 @@ export function RejectionList({ rejections, }: {
       {rejections.map((rejection) => (<div className="flag" key={rejection.code + rejection.message}>
           <FlagIcon />
           <span>
-            <strong>{rejection.code}</strong>{' '}
             {rejection.message}
           </span>
         </div>))}

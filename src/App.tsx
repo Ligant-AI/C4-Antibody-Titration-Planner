@@ -546,10 +546,7 @@ export default function App() {
               </div>
               <div className="panel-body">
                 {importError !== null && (<div className="flag">
-                    <span>
-                      <strong>C4-ST-07</strong>
-                      {importError}
-                    </span>
+                    <span>{importError}</span>
                   </div>)}
 
                 {result === null && rejections.length === 0 && (<div className="empty">

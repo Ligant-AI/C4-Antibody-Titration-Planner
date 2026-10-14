@@ -14,9 +14,7 @@ export interface Flag {
 export const THRESHOLD_EVALUATION_STATEMENT = 'Flags that compare quantities are evaluated on the unrounded value, which may differ from ' +
     'the displayed value in its last significant figure. A flagged point and an unflagged one ' +
     'can therefore display identically.';
-export const RATIO_TEST_BLIND_SPOT_STATEMENT = 'The series arithmetic is checked by an automated test that compares each consecutive ratio ' +
-    'against the declared dilution factor. That check has a blind spot: a defect smaller than ' +
-    'approximately one rounding per step is invisible to it.';
+export const ARITHMETIC_CHECKS_STATEMENT = 'The arithmetic is checked by automated tests: a unit conversion and its reverse return the entered value to within 1 unit in the last binary place, the same quantity entered in different units agrees to within 2, and each step of the series equals the dilution factor to within 6. These checks cannot see an error smaller than about one rounding per step, which is far below the 3 significant figures shown.';
 interface ReportablePair {
     importedBasis: ImportedMassBasis | 'any';
     stockBasis: StockMassBasis | 'any';
@@ -30,7 +28,7 @@ export const REPORTABLE_PAIRS: readonly ReportablePair[] = [
         importedBasis: 'monomer',
         stockBasis: 'any',
         reported: false,
-        reason: 'The molecular weight is declared as a monomer or single chain. The molar form would be of that unit, not of the whole reagent, unless the reagent is itself a single chain, which the tool cannot determine.',
+        reason: 'The molecular weight is declared as a subunit of a larger molecule. The molar form would count subunits, not whole reagent molecules.',
     },
     {
         importedBasis: 'any',
@@ -98,7 +96,7 @@ export function flagVolumeMismatch(amountPerTest: VendorAmount, vendorTestVolume
         evaluatedOn: 'the declared staining volume against the vendor recommendation',
         message,
         summary,
-        remedy: 'Pipetting the recommended amount into this staining volume does not reproduce the concentration the vendor recommended. Use the concentration column rather than the volume column when carrying this recommendation across.',
+        remedy: 'Pipetting the recommended amount into this staining volume does not reproduce the concentration the vendor recommended. If you intend to reproduce that concentration, use the concentration column rather than the volume column.',
     };
 }
 export function flagTestVolumeNotStated(): Flag {
@@ -108,7 +106,7 @@ export function flagTestVolumeNotStated(): Flag {
         evaluatedOn: 'the vendor recommendation declaration',
         message: 'The vendor’s intended concentration cannot be determined; the recommendation cannot be transferred to any other staining volume. The series below is fully defined at the declared volume.',
         summary: 'vendor amount has no test volume, cannot transfer to another staining volume',
-        remedy: 'An amount per test with no test volume states neither a concentration nor an amount per cell. If the datasheet gives a test volume elsewhere, enter it; otherwise treat the recommendation as applying only to the vendor’s own assay.',
+        remedy: 'An amount per test with no test volume does not state a concentration, so it cannot be carried to another staining volume. If the datasheet gives a test volume elsewhere, enter it; otherwise treat the recommendation as applying only to the vendor’s own assay.',
     };
 }
 export function flagBelowPipettingMinimum(points: readonly {
@@ -161,7 +159,7 @@ export function flagConcentrationNotStated(): Flag {
         evaluatedOn: 'the stock declaration',
         message: 'Mass-based forms are not computable; the series is expressed in forms 1 and 4, plus the vendor multiple where a basis is stated.',
         summary: 'stock concentration not stated, mass-based forms not computable',
-        remedy: 'A concentration from the certificate of analysis, or an A280 measurement, would make the mass-based forms available. Without one the series is still fully defined as volumes and dilutions.',
+        remedy: 'A concentration from the certificate of analysis, or an A280 measurement (corrected for the dye’s absorbance at 280 nm, and only if the stock contains no carrier protein), would make the mass-based forms available. Without one the series is still fully defined as volumes and dilutions.',
     };
 }
 export function flagNoCells(): Flag {
@@ -216,7 +214,7 @@ export function flagImportedCarriesFlags(imported: readonly {
         kind: 'import',
         evaluatedOn: 'the imported result object',
         message: 'The imported value carries flags, restated here in full: ' +
-            imported.map((f) => `${f.code}: ${f.message}`).join(' '),
+            imported.map((f) => `From the Molarity Converter: ${f.message}`).join(' '),
         summary: `imported value carries ${imported.length} flag${imported.length === 1 ? '' : 's'} of its own`,
         remedy: 'These qualify the molecular weight this series’ molar form rests on. They travelled with the value deliberately: a flag that stops at a tool boundary stops doing its work.',
     };
@@ -254,7 +252,7 @@ export interface RegisterEntry {
     readonly label: string;
     readonly value: string;
     readonly basis: 'derived' | 'inspection' | 'convention';
-    readonly status: string;
+    readonly reason: string;
 }
 export const PRECISION_PRINCIPLE = 'Displayed precision matches the resolution of the physical act the number drives.';
 export const CONSTANTS_REGISTER: readonly RegisterEntry[] = [
@@ -263,91 +261,49 @@ export const CONSTANTS_REGISTER: readonly RegisterEntry[] = [
         label: 'Minimum reliable pipetting volume',
         value: 'User-declared; 2 µL pre-filled as a suggestion',
         basis: 'inspection',
-        status: 'Disclosed default, and ON THE BEHAVIOUR PATH WHENEVER IT IS UNCHANGED. C4-FL-03 is evaluated against whichever value is in the field, so leaving the suggestion in place is a decision and not an abstention. Whether the minimum was entered or left at the default is recorded on the output, in the structured object and in every handoff. No single value has a basis: the minimum a pipette delivers reliably is instrument- and operator-dependent, so none is imposed.',
+        reason: 'The smallest volume a pipette delivers reliably depends on the instrument and the operator, so no single value is imposed. The 2 µL suggestion is used for the pipetting-minimum flag whenever it is left unchanged, so leaving it in place is a decision and not an abstention. Whether the minimum was entered or left at the suggestion is recorded on the output, in the structured result and in the notebook copy.',
     },
     {
         id: 'maximum-points',
         label: 'Maximum point count',
         value: '12',
         basis: 'inspection',
-        status: 'Disclosed. Chosen by inspection, as a round number comfortably above what a bench titration series actually runs, not derived from any arithmetic or layout constraint. Open item 7 is withdrawn at v0.5 and no longer the basis for this figure; see C4-NF-03 as restated, which this row does not depend on.',
+        reason: 'A round number comfortably above what a bench titration series actually runs. It is not derived from any arithmetic or layout constraint.',
     },
     {
         id: 'displayed-precision',
         label: 'Displayed precision',
         value: '3 significant figures',
         basis: 'inspection',
-        status: `Resolved for this tool under the principle recorded for C1 onward: ${PRECISION_PRINCIPLE} This tool drives a pipette, and three significant figures is the resolution at which a displayed volume corresponds to something a pipette delivers.`,
+        reason: `${PRECISION_PRINCIPLE} This tool drives a pipette, and three significant figures is the resolution at which a displayed volume corresponds to something a pipette delivers.`,
     },
     {
         id: 'rounding-mode',
         label: 'Rounding mode at displayed precision',
         value: 'Half away from zero, applied to the exact stored binary value',
         basis: 'convention',
-        status: 'Convention, scoped to C1 onward. NOT YET ADOPTED IN C1, which rounds half to even, as its own source and its own output both show. The divergence is disclosed here rather than left for a reader to discover by comparing two tools. It is applied to the exact stored value rather than to a decimal rendering: a 2-fold series from a round top point lands on genuine binary ties, and a value that merely prints like a tie is usually not one. In the Antigen Density Calculator a tie resolves away from zero, as it does here, but its displayed precision is not 3 significant figures for most of its range, so the two tools agree on which way a tie resolves and not on the precision it is resolved to.',
+        reason: 'Applied to the exact stored value rather than to a decimal rendering: a 2-fold series from a round top point lands on genuine binary ties, and a value that merely prints like a tie is usually not one. A true tie therefore always rounds away from zero. The Molarity Converter rounds exact ties to even, so on a tie the two tools can differ by one in the last displayed digit; their unrounded values agree.',
     },
     {
         id: 'dilution-factor',
         label: 'Dilution factor',
         value: 'Final volume divided by stock volume',
         basis: 'convention',
-        status: 'Convention, scoped to C1 onward, and stated on the output. A dilution of 1 in 100 is a factor of 100, one part in one hundred total, not one part plus one hundred parts. A vendor recommendation written under the other convention differs by (f + 1)/f and the tool cannot detect which was meant.',
+        reason: 'Stated on the output. A dilution of 1 in 100 is a factor of 100: one part in one hundred total, not one part plus one hundred parts. A vendor recommendation written under the other convention differs by (f + 1)/f, and the tool cannot detect which was meant.',
     },
     {
         id: 'staining-volume',
         label: 'Staining volume',
         value: 'The final volume of the stain, including the antibody',
         basis: 'convention',
-        status: 'Convention, scoped to C1 onward, and stated on the output. Whether 100 µL means the volume the antibody is added to or the volume after it is added changes the top-point concentration by the volume fraction of the antibody. Final volume is chosen because it is the quantity that determines concentration. The tool cannot verify which the user measured.',
+        reason: 'Stated on the output. Whether 100 µL means the volume the antibody is added to or the volume after it is added changes the top-point concentration by the volume fraction of the antibody. Final volume is used because it is the quantity that determines concentration. The tool cannot verify which you measured.',
     },
     {
         id: 'cell-density',
         label: 'Cell density',
         value: 'Computed and stated; no threshold applied',
         basis: 'convention',
-        status: 'Recorded as a declaration of the condition the series was designed under. NO BOUND IS APPLIED to it, deliberately: depletion depends on antigen density, affinity and cell number together, none of which this tool knows, so no single defensible bound exists. Recording the density without a threshold preserves the declaration and carries no uncharacterised constant.',
-    },
-    {
-        id: 'round-trip-tolerance',
-        label: 'Round-trip tolerance',
-        value: 'Analytic bound: 1 ULP, compared with less than or equal',
-        basis: 'derived',
-        status: 'OPEN, URS open item 6: the derivation record has not yet been signed off. The bound is a REQUIREMENT ON HOW THE CONVERSION IS STRUCTURED, not an observation: the round trip is two operations against one folded constant, because the unit factors are folded at entry, and each operation contributes at most half an ULP. Applied stepwise it would be six operations, and C1 measured that path reaching 3.0 ULP and exceeding a 1 ULP bound in 0.54% of cases. Empirical distribution, reported as evidence the bound is not loose and never as the tolerance itself: worst observed error 1.0 ULP over 200,000 cases across eleven decades of concentration, zero exceedances. Recorded in docs/open-item-06-derived-tolerances.md.',
-    },
-    {
-        id: 'unit-normalisation-tolerance',
-        label: 'Unit-normalisation tolerance (C4-IV-04)',
-        value: 'Analytic bound: 2 ULP, compared with less than or equal',
-        basis: 'derived',
-        status: 'OPEN, URS open item 6. Its own row and its own derivation, separate from the round-trip figure above: that bound is derived over the round trip ALONE, taking the folded constant as given, while this one is derived over the CONVERSION that produces it, which the round trip does not exercise. A quantity entered in the base unit (µL, µg/mL) carries no conversion rounding, since multiplying by 1 is exact; a quantity entered in mL or mg/mL carries one conversion multiply, at most half an ULP. Comparing a base-unit path against a non-base-unit path sums rather than cancels: <=0.5 ULP against <=1.5 ULP is a bound of 2 ULP on their difference. Empirical distribution, reported as evidence: worst observed 1 ULP over 50,000 swept cases at the worst-case unit pairing, zero exceedances. Recorded in docs/open-item-06-derived-tolerances.md.',
-    },
-    {
-        id: 'ratio-test-tolerance',
-        label: 'Ratio-test tolerance',
-        value: 'Analytic bound: 6 ULP, compared with less than or equal',
-        basis: 'derived',
-        status: 'OPEN, URS open item 6, on the same terms as the row above. Derived over the stated generation method and no other, and it does not inherit the round-trip figure. THE BUILD’S EARLIER 4 ULP FIGURE WAS A SAMPLE MAXIMUM OVER 3.3 MILLION CASES AND IS WITHDRAWN AS A TOLERANCE, per C4-CN-01 as amended: an empirical maximum is evidence, never the bound itself. The analytic bound counts every rounding operation in the worst consecutive pair of a 12-point series (exponents 10 and 11): 9 rounding multiplies from exponentiation by squaring, plus 3 divisions (one to form each of the two points, one to form their ratio) = 12 operations x 0.5 ULP = 6 ULP. The 3.3 million-case empirical distribution is kept as evidence the bound is not loose: worst observed 4 ULP, with only 9 cases reaching it and none above. Recorded in docs/open-item-06-derived-tolerances.md.',
-    },
-    {
-        id: 'ratio-test-sensitivity',
-        label: 'Ratio-test sensitivity',
-        value: 'Detected at 15 significant figures, NOT detected at 16',
-        basis: 'derived',
-        status: 'MEASURED, per C4-IV-05, PENDING THE ITEM 6 RECORD; signed with it rather than separately. Stated on the page as the test’s own blind spot, per C4-IV-05: a defect smaller than approximately one rounding per step is invisible to it. An inserted rounding to 16 significant figures moves the series by about 3 ULP, inside the 6 ULP bound; at 15 it reaches about 35 ULP, an order of magnitude clear of it. Recorded in docs/open-item-06-derived-tolerances.md.',
-    },
-    {
-        id: 'nf-03-conformance',
-        label: 'C4-NF-03 conformance',
-        value: 'MET at the reference viewport, under window scroll, on the four-flag fixture, at every acceptance-25 position where a row is in view',
-        basis: 'derived',
-        status: 'MEASURED against a four-flag declaration set (FL-01, FL-03, FL-07, FL-08: a staining volume, cell number, top point and pipetting minimum that all differ from the vendor\'s, which is the ordinary target user and not an edge case). `.series-sticky` is built so the flags inside it do not grow the block with flag count: `FlagSummaryList`, one line each behind a `<details>` expander, itself capped at 190px with its own scroll, open or closed. Measured by scripts/check-network.mjs, in a real browser, driving actual window scroll, at all fourteen of acceptance 25\'s positions, with every flag summary collapsed and then again with every one expanded, against `enterFourFlagCase`, the same declaration set kept permanently in reimpl/fixtures.json as c4-fx-24-four-flag-target-user. SCOPE: this holds for that four-flag declaration set, in both flag expansion states, at the reference viewport. It is NOT a bound on flag count or series length in general: the flag-summary scroll only bounds the FLAGS, and the declaration line above it has no scroll of its own, so a vendor basis whose label and values print longer than `per-test-volume-stated`\'s (measured here) is not covered by this row and has not been measured. Full measurement recorded in docs/open-item-07-layout-check.md.',
-    },
-    {
-        id: 'reference-viewport',
-        label: 'Reference viewport',
-        value: '1366 × 650 CSS px',
-        basis: 'inspection',
-        status: 'DISCLOSED, URS open item 11, CLOSED at v0.5. Page area delivered by a 1366 × 768 laptop display after browser chrome. Declared as a viewport, not a resolution. Basis configuration: PENDING. The developer’s own measurement environment does not expose real OS window chrome reliably (an automated browser reports no outer window dimensions and an atypical device pixel ratio), so the browser, version, operating system and bookmarks-bar state behind the 650 px figure have not been independently re-measured here and are recorded as pending confirmation on a representative machine, so that the number remains reproducible rather than asserted.',
+        reason: 'Recorded as part of the condition the series was designed under. No bound is applied to it, deliberately: depletion depends on antigen density, affinity and cell number together, none of which this tool knows, so no single defensible bound exists.',
     },
 ] as const;
 export const SCOPE_STATEMENT = 'Research use only. Not qualified for GxP decision-making.';
@@ -356,3 +312,67 @@ export const STAINING_VOLUME_STATEMENT = 'Staining volume is taken as the final 
 export const DILUTION_CONVENTION_STATEMENT = 'Dilution factor is final volume divided by stock volume. A dilution of 1 in 100 is a factor of 100.';
 export const VENDOR_UNTRANSFERABLE_STATEMENT = 'The vendor’s intended concentration cannot be determined from an amount per test with no test volume, so the recommendation cannot be transferred to any other staining volume. The series computed at the declared staining volume remains fully expressed in every form.';
 export { UNIT_LABEL };
+export function flagLabel(code: string): string {
+    return code.replace(/^C\d+-/, '');
+}
+export const FLAG_LEGEND: readonly {
+    readonly code: FlagCode;
+    readonly meaning: string;
+    readonly action: string;
+}[] = [
+    {
+        code: 'C4-FL-01',
+        meaning: 'Your staining volume differs from the volume the vendor’s recommendation was defined at.',
+        action: 'Pipetting the vendor’s volume of stock into your staining volume no longer gives the vendor’s concentration. If you intend to reproduce that concentration, use the concentration column, not the volume column.',
+    },
+    {
+        code: 'C4-FL-02',
+        meaning: 'The vendor gave an amount per test with no test volume.',
+        action: 'The recommendation does not state a concentration, so it cannot be moved to another volume. Enter the test volume if the datasheet gives it elsewhere.',
+    },
+    {
+        code: 'C4-FL-03',
+        meaning: 'One or more points need less stock than your pipetting minimum.',
+        action: 'Make an intermediate working stock and pipette those points from it. The dilution from stock is listed for each point.',
+    },
+    {
+        code: 'C4-FL-04',
+        meaning: 'You did not record where the stock concentration came from.',
+        action: 'Record the source (certificate of analysis, datasheet or your own measurement) before the series goes into a method record.',
+    },
+    {
+        code: 'C4-FL-05',
+        meaning: 'The vendor does not state a concentration for the stock.',
+        action: 'Only volumes and dilutions can be given. A concentration from the certificate of analysis, or your own A280 measurement (corrected for the dye’s absorbance at 280 nm, and only if the stock contains no carrier protein), makes the mass-based forms available.',
+    },
+    {
+        code: 'C4-FL-06',
+        meaning: 'No cells are declared, so this is a no-cell condition.',
+        action: 'Nothing to fix if it is a control. Mass per 10⁶ cells is not computable because there are no cells.',
+    },
+    {
+        code: 'C4-FL-07',
+        meaning: 'Your cell number differs from the one the vendor’s recommendation was determined at.',
+        action: 'If antibody is in large excess over the antigen sites in your tube, concentration is what transfers and the cell number matters little. If your cells bind a significant share of the antibody (many cells, dense antigen, a small volume), more cells need more antibody. The tool cannot tell which applies; titrate at the cell number you will stain.',
+    },
+    {
+        code: 'C4-FL-08',
+        meaning: 'The top point of your series is below the vendor’s recommended concentration.',
+        action: 'Raise the top point to at or above the recommendation if you want the series to bracket it.',
+    },
+    {
+        code: 'C4-FL-09',
+        meaning: 'The imported molecular weight includes the label or payload.',
+        action: 'The molar form is of the conjugate, not of the antibody alone. Use a protein-basis molecular weight if you want the antibody’s own molarity.',
+    },
+    {
+        code: 'C4-FL-10',
+        meaning: 'The imported molecular weight arrived with flags of its own.',
+        action: 'They are repeated in full. They qualify the molecular weight the molar form rests on.',
+    },
+    {
+        code: 'C4-FL-11',
+        meaning: 'The molar concentration is withheld because the stock mass and the molecular weight are not on a matching basis. It is shown only for a whole-molecule weight with a stock quoted as antibody protein, or a conjugate weight with a stock quoted as conjugate. A subunit weight, any other pairing, or an unrecorded basis withholds it.',
+        action: 'Import a molecular weight from the Molarity Converter declared on the same basis as the stock (assembled for antibody protein, conjugate for conjugate), or record the basis that is missing.',
+    },
+];
