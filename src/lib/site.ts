@@ -1,0 +1,10 @@
+export const SITE_URL = 'https://benchtools.ligant.ai';
+export const TOOL_PATH = '/antibody-titration-planner/';
+export const DEPLOYED_URL = `${SITE_URL}${TOOL_PATH}`;
+export const TOOL_ID = 'C4';
+export const TOOL_NAME = 'Antibody Titration Planner';
+export const URS_VERSION = '0.6';
+export const APP_VERSION = 'v0.1.0';
+export const RELEASE_YEAR = 2026;
+export const REPO_URL: string | null = 'https://github.com/Ligant-AI/C4-Antibody-Titration-Planner';
+export const CITATION_DOI: string | null = '10.5281/zenodo.22773732';
