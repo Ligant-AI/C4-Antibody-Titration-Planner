@@ -1,6 +1,6 @@
 import type { SeriesResult } from '../lib/compute';
 import { PrivacyPanel } from './shared/PrivacyPanel';
-import { CONSTANTS_REGISTER, DETERMINES_NOT_VERIFIES_STATEMENT, DILUTION_CONVENTION_STATEMENT, FLAG_LEGEND, flagLabel, PRECISION_PRINCIPLE, ARITHMETIC_CHECKS_STATEMENT, SCOPE_STATEMENT, STAINING_VOLUME_STATEMENT, THRESHOLD_EVALUATION_STATEMENT, UNDETECTABLE_FAILURES, } from '../lib/flags';
+import { CONSTANTS_REGISTER, DETERMINES_NOT_VERIFIES_STATEMENT, DILUTION_CONVENTION_STATEMENT, FLAG_LEGEND, flagLabel, PRECISION_PRINCIPLE, ARITHMETIC_CHECKS_STATEMENT, STAINING_VOLUME_STATEMENT, THRESHOLD_EVALUATION_STATEMENT, UNDETECTABLE_FAILURES, } from '../lib/flags';
 import { PRECISION_STATEMENT } from '../lib/format';
 import { INTEGRITY_SCOPE_STATEMENT } from '../lib/transport';
 function withEmphasis(text: string) {
@@ -222,10 +222,6 @@ export function Method({ result, importAttempted }: Props) {
         <ul>
           {UNDETECTABLE_FAILURES.map((failure) => (<li key={failure}>{withEmphasis(failure)}</li>))}
         </ul>
-        <p>
-          <strong>{SCOPE_STATEMENT}</strong>
-        </p>
-
         <PrivacyPanel />
       </div>
     </section>);

@@ -9,7 +9,6 @@ import { SeriesTable, notebookLine, vendorBasisSummary } from './components/Seri
 import { computeSeries, type Outcome } from './lib/compute';
 import { EMPTY_FORM, missingDeclarations, panelCompletion, reconcileTopPoint, toSeriesInputs, type FormState, } from './lib/form';
 import { formatSigFigs } from './lib/format';
-import { SCOPE_STATEMENT } from './lib/flags';
 import { MAX_POINTS, MIN_POINTS, acceptedTopPointForms, type ImportedMolecularWeight, } from './lib/normalise';
 import { CONFIRM_LABEL_DEFAULT, CONFIRM_LABEL_SUGGESTED_UNIT, CONFIRM_LABEL_SUGGESTED_VALUES, SUGGESTION_MARKER_LABEL, SUGGESTION_MARKER_TOOLTIP, } from './lib/suggestions';
 import { FieldHelp, FieldHelpProvider } from './components/shared/FieldHelp';
@@ -717,7 +716,7 @@ export default function App() {
       <SuiteFooter {...FOOTER}/>
 
       <p className="disclaimer">
-        <strong>{SCOPE_STATEMENT}</strong> This tool determines the target concentration at each
+        This tool determines the target concentration at each
         point of a titration series. It does not prepare the series, does not observe what was
         pipetted, does not analyse the resulting data, does not choose the optimal point, and cannot
         determine whether any point saturates the target. A vendor recommendation is a concentration
