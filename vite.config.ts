@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { SITE_URL, TOOL_PATH } from './src/lib/site';
+import { renderHeader } from '@ligant/bench-chrome';
+import { HEADER } from './src/lib/chrome';
+import { faqPanelHtml, jsonLdHtml, relatedHtml } from './src/lib/seo';
 function siteMetadata(): Plugin {
     return {
         name: 'ligant-site-metadata',
@@ -51,8 +54,21 @@ function siteMetadata(): Plugin {
         },
     };
 }
+function staticBlock(): Plugin {
+    const ROOT = '<div id="root"></div>';
+    return {
+        name: 'ligant-static-block',
+        transformIndexHtml(html: string) {
+            if (!html.includes(ROOT))
+                throw new Error('ligant-static-block: <div id="root"></div> not found in index.html');
+            return html
+                .replace(ROOT, `<div id="root"><div class="app"><header class="masthead">${renderHeader(HEADER)}</header><main id="main">${relatedHtml()}${faqPanelHtml()}</main></div></div>`)
+                .replace('</head>', `  ${jsonLdHtml()}\n  </head>`);
+        },
+    };
+}
 export default defineConfig({
-    plugins: [react(), siteMetadata()],
+    plugins: [react(), siteMetadata(), staticBlock()],
     base: './',
     build: {
         rollupOptions: {

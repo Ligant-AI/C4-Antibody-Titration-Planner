@@ -1,4 +1,5 @@
 import type { SeriesResult } from '../lib/compute';
+import { SEO } from '../lib/seo';
 import { PrivacyPanel } from './shared/PrivacyPanel';
 import { CONSTANTS_REGISTER, DETERMINES_NOT_VERIFIES_STATEMENT, DILUTION_CONVENTION_STATEMENT, FLAG_LEGEND, flagLabel, PRECISION_PRINCIPLE, ARITHMETIC_CHECKS_STATEMENT, STAINING_VOLUME_STATEMENT, THRESHOLD_EVALUATION_STATEMENT, UNDETECTABLE_FAILURES, } from '../lib/flags';
 import { PRECISION_STATEMENT } from '../lib/format';
@@ -71,6 +72,10 @@ export function Method({ result, importAttempted }: Props) {
             result below it carries the unrounded value and unit of every quantity.
           </li>
         </ol>
+        <p className="related">
+          <a href={SEO.related.href}>{SEO.related.name}</a>
+          {SEO.related.text.slice(SEO.related.name.length)}
+        </p>
 
         <h3>How it works</h3>
         <p>

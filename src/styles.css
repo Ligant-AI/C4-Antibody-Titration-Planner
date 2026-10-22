@@ -110,6 +110,12 @@ p  { margin: 0; }
 .method-panel a { color: var(--text-primary); text-decoration: underline; text-underline-offset: 2px; }
 .method-panel a:hover { color: var(--brand-teal); }
 
+.faq-panel { margin-top: 20px; }
+.faq-panel h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-primary); }
+.faq-panel div + div h3 { margin-top: 14px; }
+.faq-panel p { color: var(--text-secondary); font-size: 13px; line-height: 1.6; max-width: 110ch; margin: 0; }
+.method-panel .related { margin-top: 10px; }
+
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);

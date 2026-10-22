@@ -5,6 +5,7 @@ import { SkipLink } from './components/shared/SkipLink';
 import { FlagList, FlagSummaryList, RejectionList } from './components/shared/FlagList';
 import { DeclarationPanel } from './components/DeclarationPanel';
 import { Method } from './components/Method';
+import { Faq } from './components/Faq';
 import { SeriesTable, notebookLine, vendorBasisSummary } from './components/SeriesTable';
 import { computeSeries, type Outcome } from './lib/compute';
 import { EMPTY_FORM, missingDeclarations, panelCompletion, reconcileTopPoint, toSeriesInputs, type FormState, } from './lib/form';
@@ -712,6 +713,8 @@ export default function App() {
               </section>)}
           </div>
         </div>
+
+        <Faq />
       </main>
 
       <SuiteFooter {...FOOTER}/>

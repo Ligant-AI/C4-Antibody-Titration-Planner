@@ -1,13 +1,11 @@
 import type { FooterOptions, HeaderOptions } from '@ligant/bench-chrome';
 import { SCOPE_STATEMENT } from './flags';
+import { SEO } from './seo';
 import { APP_VERSION, CITATION_DOI, DEPLOYED_URL, RELEASE_YEAR, REPO_URL, TOOL_NAME, TOOL_PATH } from './site';
 export const HEADER: HeaderOptions = {
     path: TOOL_PATH,
-    title: TOOL_NAME,
-    description: 'Plans an antibody titration series for flow cytometry: the concentration at each point, in ' +
-        'every form the bench and the method record require, for the staining volume and cell number ' +
-        'you declare. Every value is computed deterministically by arithmetic you can read. No model ' +
-        'and no inference is applied to any reported number.',
+    title: SEO.h1,
+    description: SEO.lead,
 };
 export const FOOTER: FooterOptions = {
     repoUrl: REPO_URL ?? '',
