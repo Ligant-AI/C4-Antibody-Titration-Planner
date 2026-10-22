@@ -107,6 +107,7 @@ export default function App() {
         const match = /[#&]c1=([A-Za-z0-9_-]+)/.exec(window.location.hash);
         if (match === null)
             return;
+        history.replaceState(null, '', window.location.pathname + window.location.search);
         const outcome = decodeEnvelope<Record<string, any>>(match[1], 'c1-conversion');
         if (!outcome.ok) {
             setImportError(outcome.rejection.message);
