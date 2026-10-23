@@ -33,7 +33,7 @@ export const SEO = {
         },
         {
             q: 'Does it pick the optimal concentration?',
-            a: 'No. It does not prepare the series, does not analyse the resulting data, does not choose the optimal point, and does not determine whether any point saturates the target.',
+            a: 'No. It does not prepare the series, does not analyze the resulting data, does not choose the optimal point, and does not determine whether any point saturates the target.',
         },
         {
             q: 'Is my data uploaded anywhere?',
